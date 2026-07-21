@@ -486,6 +486,11 @@ void gpu_flush(bool default_for_both, int displayed_fb, int vip_displayed_fb) {
         {vb_state->tVIPREG.BRTB / 128.0, 0, 0},
         {(vb_state->tVIPREG.BRTA + vb_state->tVIPREG.BRTB + vb_state->tVIPREG.BRTC) / 128.0, 0, 0},
     };
+    if (tVBOpt.ANAGLYPH) {
+        for (int c = 0; c < 4; c++) {
+            colors[c][1] = colors[c][2] = colors[c][0];
+        }
+    }
     glUniform3fv(glGetUniformLocation(sFinal, "uPalette"), 4, &colors[0][0]);
 
     GLfloat vPositions[] = {
@@ -503,7 +508,18 @@ void gpu_flush(bool default_for_both, int displayed_fb, int vip_displayed_fb) {
     glVertexAttribPointer(glGetAttribLocation(sFinal, "aTexCoord"), 2, GL_FLOAT, GL_FALSE, 0, vTexCoords);
     glEnableVertexAttribArray(glGetAttribLocation(sFinal, "aTexCoord"));
 
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    if (tVBOpt.ANAGLYPH) {
+        glColorMask(tVBOpt.ANAGLYPH_LEFT & 1, tVBOpt.ANAGLYPH_LEFT & 2, tVBOpt.ANAGLYPH_LEFT & 4, true);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        for (int i = 0; i < 4; i++) {
+            vTexCoords[i*2] += 0.5;
+        }
+        glColorMask(false, false, true, true);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glColorMask(tVBOpt.ANAGLYPH_RIGHT & 1, tVBOpt.ANAGLYPH_RIGHT & 2, tVBOpt.ANAGLYPH_RIGHT & 4, true);
+    } else {
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    }
 
     SDL_GL_SwapWindow(window);
 }
