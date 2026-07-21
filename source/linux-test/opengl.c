@@ -147,11 +147,12 @@ void gpu_init(void) {
 
         "uniform sampler2D sVip, sSoft;\n"
         "uniform mediump vec3 uPalette[4];\n"
+        "uniform bool uVipOverSoft;\n"
         "varying mediump vec2 vTexCoord;\n"
         "void main() {\n"
         "   mediump vec4 vip = texture2D(sVip, vTexCoord);\n"
         "   mediump vec4 soft = texture2D(sSoft, vTexCoord);\n"
-        "   mediump vec4 color = soft.a == 0.0 ? vip : soft;\n"
+        "   mediump vec4 color = (uVipOverSoft ? (vip.xyz != vec3(0, 0, 0)) : (soft.a == 0.0)) ? vip : soft;\n"
         "   gl_FragColor = vec4(mix(mix(mix(uPalette[0], uPalette[1], color.x), uPalette[2], color.y), uPalette[3], color.z), 1.0);\n"
         "}\n"
     );
@@ -476,6 +477,8 @@ void gpu_flush(bool default_for_both, int displayed_fb, int vip_displayed_fb) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, tDSPCACHE.DDSPDataState[displayed_fb] != GPU_CLEAR ? screenTexSoft[displayed_fb] : transparentPixelTexture);
     glUniform1i(glGetUniformLocation(sFinal, "sSoft"), 1);
+
+    glUniform1i(glGetUniformLocation(sFinal, "uVipOverSoft"), tVBOpt.VIP_OVER_SOFT);
 
     float colors[4][3] = {
         {0, 0, 0},
