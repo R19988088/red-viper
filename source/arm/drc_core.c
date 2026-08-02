@@ -716,7 +716,6 @@ static unsigned int drc_decodeInstructions(exec_block *block, WORD start_PC, WOR
         }
 
         cur_PC += am_size_table[optable[inst_cache[i].opcode].addr_mode];
-        block->cycles += opcycle[inst_cache[i].opcode];
 
         while (!drc_isCode(cur_PC) && cur_PC < end_PC) {
             cur_PC += 2;
