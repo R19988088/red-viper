@@ -363,6 +363,7 @@ void v810_reset(void) {
     tVBOpt.VIP_OVER_SOFT = (
         CHECK_GAMEID("01VREE") // Red Alarm (U)
         || CHECK_GAMEID("E4VREJ") // Red Alarm (J)
+        || CHECK_GAMEID("01VZRE") // Zero Racers
     );
 
     // Double buffering is more accurate, but adds 1 frame of input lag.
