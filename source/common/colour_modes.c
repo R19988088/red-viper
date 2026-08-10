@@ -14,3 +14,7 @@ unsigned colour_mode_value(int mode, int shade) {
     if (shade < 0 || shade >= COLOUR_SHADE_COUNT) shade = 0;
     return COLOUR_MODES[colour_mode_normalize(mode)][shade];
 }
+
+unsigned colour_mode_c2d(int mode, int shade) {
+    return 0xFF000000u | colour_mode_value(mode, shade);
+}

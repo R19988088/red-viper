@@ -16,8 +16,15 @@ int main(void) {
     assert(COLOUR_SHADE_ACTIVE == 3);
 
     for (int mode = 0; mode < COLOUR_MODE_COUNT; mode++)
-        for (int shade = 0; shade < COLOUR_SHADE_COUNT; shade++)
+        for (int shade = 0; shade < COLOUR_SHADE_COUNT; shade++) {
             assert(colour_mode_value(mode, shade) == expected[mode][shade]);
+            assert(colour_mode_c2d(mode, shade) == (0xFF000000u | expected[mode][shade]));
+        }
+
+    assert(colour_mode_c2d(0, 0) == 0xFF000000u);
+    assert(colour_mode_c2d(0, 1) == 0xFF040861u);
+    assert(colour_mode_c2d(0, 2) == 0xFF0A1294u);
+    assert(colour_mode_c2d(0, 3) == 0xFF2A29FFu);
 
     assert(colour_mode_normalize(-1) == 0);
     assert(colour_mode_normalize(-100) == 0);

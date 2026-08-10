@@ -16,5 +16,6 @@ enum ColourShadeRole {
 
 int colour_mode_normalize(int mode);
 unsigned colour_mode_value(int mode, int shade);
+unsigned colour_mode_c2d(int mode, int shade);
 
 #endif
