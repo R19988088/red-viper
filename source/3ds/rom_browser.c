@@ -189,7 +189,8 @@ bool rom_browser_go_up(RomBrowserModel *model) {
     if (!slash) return false;
     if (slash == next_path ||
         (strncmp(next_path, "sdmc:", 5) == 0 && slash == next_path + 5)) {
-        next_path[1] = 0;
+        if (strncmp(next_path, "sdmc:", 5) == 0) next_path[6] = 0;
+        else next_path[1] = 0;
     } else {
         *slash = 0;
     }
