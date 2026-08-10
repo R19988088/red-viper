@@ -117,10 +117,10 @@ void setDefaults(void) {
     tVBOpt.CUSTOM_CONTROLS = 0;
     setCustomMappingDefaults();
     tVBOpt.MULTICOL = true;
-    tVBOpt.TINT = 0x0000ff;
     tVBOpt.MULTIID = 0;
-    tVBOpt.MTINT[0][0] = 0;
-    tVBOpt.MTINT[0][1] = tVBOpt.MTINT[0][2] = tVBOpt.MTINT[0][3] = 0x0000ff;
+    tVBOpt.TINT = colour_mode_value(tVBOpt.MULTIID, COLOUR_SHADE_ACTIVE);
+    for (int shade = 0; shade < COLOUR_SHADE_COUNT; shade++)
+        tVBOpt.MTINT[0][shade] = colour_mode_value(0, shade);
     tVBOpt.STINT[0][0] = tVBOpt.STINT[0][1] = tVBOpt.STINT[0][2] = 1.0;
     tVBOpt.MTINT[1][0] = 0x394129;
     tVBOpt.MTINT[1][1] = tVBOpt.MTINT[1][2] = tVBOpt.MTINT[1][3] = 0x10827b;
@@ -455,6 +455,8 @@ int loadFileOptions(void) {
     int ret = ini_parse(CONFIG_FILENAME, handler, &tVBOpt);
     tVBOpt.MULTICOL = true;
     tVBOpt.MULTIID = colour_mode_normalize(tVBOpt.MULTIID);
+    /* Keep legacy tint consumers on the selected fixed palette as well. */
+    tVBOpt.TINT = colour_mode_value(tVBOpt.MULTIID, COLOUR_SHADE_ACTIVE);
     if (tVBOpt.LANGUAGE < LANGUAGE_CHINESE || tVBOpt.LANGUAGE >= LANGUAGE_COUNT)
         tVBOpt.LANGUAGE = LANGUAGE_CHINESE;
     tVBOpt.ANAGLYPH = false;

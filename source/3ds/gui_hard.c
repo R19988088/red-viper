@@ -106,7 +106,7 @@ static C2D_TextBuf savestate_textbuf;
  * long-lived static text buffer. */
 static C2D_TextBuf language_textbuf;
 
-static C2D_Text text_A, text_B, text_btn_A, text_btn_B, text_btn_X, text_btn_L, text_btn_R,
+static C2D_Text text_A, text_B, text_btn_A, text_btn_B, text_btn_L, text_btn_R,
                 text_switch, text_saving, text_on, text_off, text_toggle, text_hold, text_nintendo_3ds,
                 text_vbipd, text_left, text_right, text_sound_error, text_anykeyexit, text_about,
                 text_debug_filenames, text_loading, text_loaderr, text_unloaded, text_yes, text_no,
@@ -305,7 +305,8 @@ static const char *rom_display_path(const char *path);
 int strptrcmp(const void *s1, const void *s2);
 static Button rom_loader_buttons[] = {
     #define ROM_LOADER_UP 0
-    {.str="上一级", .up_action=true, .x=128, .y=8, .w=64, .h=24, .text_scale=0.5f},
+    {.str="上一级", .up_action=true, .x=128, .y=0, .w=72, .h=32, .text_scale=0.5f,
+        .transparent=true, .themed=true, .left_aligned=true},
     #define ROM_LOADER_BACK 1
     {.str=NULL, .back_action=true, .hidden=true},
 };
@@ -889,12 +890,13 @@ static bool refresh_rom_preview(const char *requested_path) {
 static void draw_main_menu_shell(int active_item) {
     MenuTheme theme = menu_theme();
     C2D_DrawRectSolid(120, 0, 0, 200, 240, theme.panel_bg);
+    bool options_focus = active_item == MAIN_MENU_OPTIONS;
     for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
         Button *button = &main_menu_buttons[i];
         if (button->hidden) continue;
-        if (i == active_item)
+        if (i == active_item && !options_focus)
             C2D_DrawRectSolid(button->x, button->y, 0, button->w, button->h, theme.nav_selected_bg);
-        u32 text_color = i == active_item ? theme.nav_selected_text :
+        u32 text_color = i == active_item && !options_focus ? theme.nav_selected_text :
             (button->disabled ? theme.disabled_text : theme.nav_text);
         C2D_DrawText(&button->text, C2D_AlignLeft | C2D_WithColor,
             button->x + 8, button->y + button->h / 2 - 10, 0, 0.7, 0.7, text_color);
@@ -935,7 +937,7 @@ static void draw_main_menu_preview(int active_item, MenuTheme theme) {
                 C2D_DrawText(&option->text, C2D_AlignLeft | C2D_WithColor,
                     128, y + 6, 0, 0.55, 0.55, label_colour);
                 C2D_DrawRectSolid(216, y, 0, 88, 32, value_bg);
-                C2D_DrawText(option->option_texts[option->option], C2D_AlignLeft | C2D_WithColor,
+                C2D_DrawText(option->option_texts[option->option], C2D_AlignCenter | C2D_WithColor,
                     260, y + 6, 0, 0.5, 0.5, value_colour);
             }
             break;
@@ -963,10 +965,12 @@ static void draw_main_menu_preview(int active_item, MenuTheme theme) {
                 C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor,
                     128, 4, 0, 0.5, 0.5, theme.nav_selected_text);
                 int entries = rom_preview_cache.dir_count + rom_preview_cache.file_count;
-                for (int i = 0; i < entries && i < 6; i++) {
+                for (int i = 0; i < entries; i++) {
+                    float y = 32 + i * 28;
+                    if (y >= 240) break;
                     const char *name = i < rom_preview_cache.dir_count ?
                         rom_preview_cache.dirs[i] : rom_preview_cache.files[i - rom_preview_cache.dir_count];
-                    draw_preview_text(name, 128, 32 + i * 28, 0.45,
+                    draw_preview_text(name, 128, y, 0.45,
                         i == rom_preview_cache.cursor ? theme.nav_selected_text : theme.disabled_text);
                 }
             }
@@ -996,7 +1000,7 @@ static void draw_main_menu_panel(void) {
                     refresh_savestate_cache();
             }
             if (active_item == MAIN_MENU_LOAD_ROM &&
-                (!rom_preview_cache.valid || osGetTime() - rom_preview_cache.last_refresh >= 500))
+                (!rom_preview_cache.valid || osGetTime() - rom_preview_cache.last_refresh >= 250))
                 refresh_rom_preview(tVBOpt.ROM_PATH);
             draw_main_menu_preview(active_item, theme);
         }
@@ -1433,9 +1437,12 @@ static bool rom_loader_impl(char *message, bool refresh) {
     #define DEFAULT_RETURN false
 
     MenuTheme menu_colours = menu_theme();
+    rom_loader_buttons[ROM_LOADER_UP].text_colour = menu_colours.nav_text;
+    rom_loader_buttons[ROM_LOADER_UP].selected_colour = menu_colours.row_selected_bg;
+    rom_loader_buttons[ROM_LOADER_UP].selected_text_colour = menu_colours.nav_selected_text;
     LOOP_BEGIN(rom_loader_buttons, -1);
         draw_main_menu_shell(MAIN_MENU_LOAD_ROM);
-        if (osGetTime() - last_refresh >= 500) {
+        if (osGetTime() - last_refresh >= 250) {
             last_refresh = osGetTime();
             char **new_dirs = NULL;
             char **new_files = NULL;
@@ -1651,7 +1658,7 @@ static bool rom_loader_impl(char *message, bool refresh) {
         // path
         C2D_TextParse(&path_text, dynamic_textbuf, rom_display_path(path));
         C2D_TextOptimize(&path_text);
-        C2D_DrawRectSolid(120, 0, 0, 200, 24, menu_colours.panel_bg);
+        C2D_DrawRectSolid(120, 0, 0, 200, 32, menu_colours.panel_bg);
 
         if (message) {
             C2D_Text message_text;
@@ -1660,11 +1667,8 @@ static bool rom_loader_impl(char *message, bool refresh) {
             C2D_DrawText(&message_text, C2D_AlignLeft | C2D_WithColor, 128, 4, 0, 0.5, 0.5, menu_colours.nav_selected_text);
             C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 4, 0, 0.5, 0.5, menu_colours.disabled_text);
         } else {
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, 4, 0, 0.5, 0.5, menu_colours.disabled_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 4, 0, 0.5, 0.5, menu_colours.disabled_text);
         }
-
-        // up button indicator
-        C2D_DrawText(&text_btn_X, C2D_AlignLeft | C2D_WithColor, 128, 28, 0, 0.55, 0.55, menu_colours.nav_selected_text);
     LOOP_END(rom_loader_buttons);
 
     #undef DEFAULT_RETURN
@@ -3555,7 +3559,6 @@ void guiInit(void) {
     STATIC_TEXT(&text_B, "B")
     STATIC_TEXT(&text_btn_A, "\uE000")
     STATIC_TEXT(&text_btn_B, "\uE001")
-    STATIC_TEXT(&text_btn_X, "\uE002")
     STATIC_TEXT(&text_btn_L, "\uE004")
     STATIC_TEXT(&text_btn_R, "\uE005")
     STATIC_TEXT(&text_switch, "切换")
