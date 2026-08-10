@@ -30,6 +30,7 @@
 #include "patches.h"
 #include "video_hard.h"
 #include "colour_modes.h"
+#include "menu_navigation.h"
 
 #define COLOR_R(COLOR) ( ((COLOR) & 0x000000FF) )
 #define COLOR_G(COLOR) ( ((COLOR) & 0x0000FF00) >> 8)
@@ -100,6 +101,7 @@ static C3D_RenderTarget *screen;
 
 static C2D_TextBuf static_textbuf;
 static C2D_TextBuf dynamic_textbuf;
+static C2D_TextBuf savestate_textbuf;
 /* Rebuilt when the language changes so button labels do not accumulate in the
  * long-lived static text buffer. */
 static C2D_TextBuf language_textbuf;
@@ -158,25 +160,24 @@ typedef struct {
 
 static MenuTheme menu_theme(void) {
     int mode = colour_mode_normalize(tVBOpt.MULTIID);
-    unsigned shade0 = colour_mode_value(mode, 0);
-    unsigned shade1 = colour_mode_value(mode, 1);
-    unsigned shade2 = colour_mode_value(mode, 2);
-    unsigned shade3 = colour_mode_value(mode, 3);
+    unsigned shade1 = colour_mode_value(mode, COLOUR_SHADE_DISABLED);
+    unsigned shade2 = colour_mode_value(mode, COLOUR_SHADE_READY);
+    unsigned shade3 = colour_mode_value(mode, COLOUR_SHADE_ACTIVE);
     return (MenuTheme) {
         .nav_text = C2D_Color32(COLOR_R(shade2), COLOR_G(shade2), COLOR_B(shade2), 255),
-        .nav_selected_bg = C2D_Color32(COLOR_R(shade1), COLOR_G(shade1), COLOR_B(shade1), 255),
+        .nav_selected_bg = C2D_Color32(COLOR_R(shade2), COLOR_G(shade2), COLOR_B(shade2), 255),
         .nav_selected_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
         .disabled_text = C2D_Color32(COLOR_R(shade1), COLOR_G(shade1), COLOR_B(shade1), 255),
         .option_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
-        .panel_bg = C2D_Color32(COLOR_R(shade0), COLOR_G(shade0), COLOR_B(shade0), 255),
-        .row_selected_bg = C2D_Color32(COLOR_R(shade2), COLOR_G(shade2), COLOR_B(shade2), 255),
+        .panel_bg = C2D_Color32(COLOR_R(shade2), COLOR_G(shade2), COLOR_B(shade2), 255),
+        .row_selected_bg = C2D_Color32(COLOR_R(shade1), COLOR_G(shade1), COLOR_B(shade1), 255),
         .row_selected_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
     };
 }
 
 static u32 menu_background_color(void) {
     int mode = colour_mode_normalize(tVBOpt.MULTIID);
-    unsigned color = colour_mode_value(mode, 0);
+    unsigned color = colour_mode_value(mode, COLOUR_SHADE_BACKGROUND);
     return C2D_Color32(COLOR_R(color), COLOR_G(color), COLOR_B(color), 255);
 }
 
@@ -201,6 +202,17 @@ struct Button_t {
 
 static Button* selectedButton = NULL;
 static bool buttonLock = false;
+
+typedef struct {
+    bool valid;
+    bool exists[10];
+    time_t mtimes[10];
+    char labels[10][32];
+    C2D_Text texts[10];
+} SavestateListCache;
+
+static SavestateListCache savestate_cache;
+static int main_menu_preview_item = -1;
 
 static inline int handle_buttons(Button buttons[], int count);
 #define HANDLE_BUTTONS(buttons) handle_buttons((buttons), sizeof((buttons)) / sizeof((buttons)[0]))
@@ -289,6 +301,7 @@ static void multiplayer_wait_for_peer(void);
 static bool rom_loader(char *message);
 static bool rom_loader_impl(char *message, bool refresh);
 static const char *rom_display_path(const char *path);
+int strptrcmp(const void *s1, const void *s2);
 static Button rom_loader_buttons[] = {
     #define ROM_LOADER_UP 0
     {.str="上一级", .up_action=true, .x=128, .y=8, .w=64, .h=24, .text_scale=0.5f},
@@ -747,6 +760,116 @@ static void style_main_menu(void) {
     }
 }
 
+static void refresh_savestate_cache(void) {
+    if (!savestate_textbuf) return;
+    C2D_TextBufClear(savestate_textbuf);
+    for (int slot = 0; slot < 10; slot++) {
+        time_t mtime;
+        savestate_cache.exists[slot] = emulation_state_mtime(slot, &mtime);
+        savestate_cache.mtimes[slot] = savestate_cache.exists[slot] ? mtime : 0;
+        if (savestate_cache.exists[slot]) {
+            struct tm *local = localtime(&mtime);
+            char time_text[24];
+            if (local) strftime(time_text, sizeof(time_text), "%m-%d %H:%M", local);
+            else strcpy(time_text, "--");
+            snprintf(savestate_cache.labels[slot], sizeof(savestate_cache.labels[slot]),
+                "%02d  %s", slot + 1, time_text);
+        } else {
+            snprintf(savestate_cache.labels[slot], sizeof(savestate_cache.labels[slot]),
+                "%02d  --", slot + 1);
+        }
+        C2D_TextParse(&savestate_cache.texts[slot], savestate_textbuf,
+            savestate_cache.labels[slot]);
+        C2D_TextOptimize(&savestate_cache.texts[slot]);
+    }
+    savestate_cache.valid = true;
+}
+
+typedef struct {
+    bool valid;
+    char path[300];
+    char **dirs;
+    int dir_count;
+    char **files;
+    int file_count;
+    int cursor;
+} RomPreviewCache;
+
+static RomPreviewCache rom_preview_cache;
+
+static char *copy_rom_entry_name(const char *name) {
+    size_t length = strlen(name) + 1;
+    char *copy = malloc(length);
+    if (copy) memcpy(copy, name, length);
+    return copy;
+}
+
+static void clear_rom_preview_cache(void) {
+    for (int i = 0; i < rom_preview_cache.dir_count; i++) free(rom_preview_cache.dirs[i]);
+    for (int i = 0; i < rom_preview_cache.file_count; i++) free(rom_preview_cache.files[i]);
+    free(rom_preview_cache.dirs);
+    free(rom_preview_cache.files);
+    rom_preview_cache.dirs = NULL;
+    rom_preview_cache.files = NULL;
+    rom_preview_cache.dir_count = 0;
+    rom_preview_cache.file_count = 0;
+    rom_preview_cache.valid = false;
+}
+
+static bool refresh_rom_preview(const char *requested_path) {
+    clear_rom_preview_cache();
+    char path[300];
+    if (requested_path && requested_path[0]) strncpy(path, requested_path, sizeof(path) - 1);
+    else strcpy(path, "sdmc:/");
+    path[sizeof(path) - 1] = 0;
+
+    char *slash = strrchr(path, '/');
+    if (slash) slash[1] = 0;
+    if (strlen(path) < 6) strcpy(path, "sdmc:/");
+
+    DIR *dir_handle = opendir(path);
+    if (!dir_handle) return false;
+
+    char **dirs = malloc(8 * sizeof(char*));
+    char **files = malloc(8 * sizeof(char*));
+    int dir_count = 0, file_count = 0;
+    int dir_cap = 8, file_cap = 8;
+    struct dirent *dp;
+    while ((dp = readdir(dir_handle))) {
+        archive_dir_t *dir_state = (archive_dir_t*)dir_handle->dirData->dirStruct;
+        FS_DirectoryEntry *entry = &dir_state->entry_data[dir_state->index];
+        if ((entry->attributes & FS_ATTRIBUTE_HIDDEN) || dp->d_name[0] == '.') continue;
+        if (entry->attributes & FS_ATTRIBUTE_DIRECTORY) {
+            if (dir_count == dir_cap) {
+                dir_cap *= 2;
+                dirs = realloc(dirs, dir_cap * sizeof(char*));
+            }
+            dirs[dir_count++] = copy_rom_entry_name(dp->d_name);
+        } else {
+            char *dot = strrchr(dp->d_name, '.');
+            if (!dot || (strcasecmp(dot, ".vb") != 0 && strcasecmp(dot, ".zip") != 0)) continue;
+            if (file_count == file_cap) {
+                file_cap *= 2;
+                files = realloc(files, file_cap * sizeof(char*));
+            }
+            files[file_count++] = copy_rom_entry_name(dp->d_name);
+        }
+    }
+    closedir(dir_handle);
+    qsort(files, file_count, sizeof(char*), strptrcmp);
+    qsort(dirs, dir_count, sizeof(char*), strptrcmp);
+
+    strncpy(rom_preview_cache.path, path, sizeof(rom_preview_cache.path) - 1);
+    rom_preview_cache.path[sizeof(rom_preview_cache.path) - 1] = 0;
+    rom_preview_cache.dirs = dirs;
+    rom_preview_cache.files = files;
+    rom_preview_cache.dir_count = dir_count;
+    rom_preview_cache.file_count = file_count;
+    rom_preview_cache.cursor = 0;
+    rom_preview_cache.valid = true;
+    return true;
+}
+
 static void draw_main_menu_shell(int active_item) {
     MenuTheme theme = menu_theme();
     C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
@@ -773,22 +896,13 @@ static void draw_preview_text(const char *text, float x, float y, float scale, u
 static void draw_main_menu_preview(int active_item, MenuTheme theme) {
     switch (active_item) {
         case MAIN_MENU_SAVESTATES:
+            if (!savestate_cache.valid) refresh_savestate_cache();
             for (int slot = 0; slot < 10; slot++) {
-                char row[32];
-                time_t mtime;
-                if (emulation_state_mtime(slot, &mtime)) {
-                    struct tm *local = localtime(&mtime);
-                    char time_text[24];
-                    if (local) strftime(time_text, sizeof(time_text), "%m-%d %H:%M", local);
-                    else strcpy(time_text, "--");
-                    snprintf(row, sizeof(row), "%02d  %s", slot + 1, time_text);
-                } else {
-                    snprintf(row, sizeof(row), "%02d  --", slot + 1);
-                }
                 if (slot == last_savestate)
                     C2D_DrawRectSolid(128, 36 + slot * 15, 0, 176, 15, theme.row_selected_bg);
-                draw_preview_text(row, 136, 38 + slot * 15, 0.45,
-                    slot == last_savestate ? theme.row_selected_text : theme.nav_text);
+                C2D_DrawText(&savestate_cache.texts[slot], C2D_AlignLeft | C2D_WithColor,
+                    136, 38 + slot * 15, 0, 0.45, 0.45,
+                    slot == last_savestate ? theme.row_selected_text : theme.disabled_text);
             }
             break;
         case MAIN_MENU_OPTIONS:
@@ -798,7 +912,7 @@ static void draw_main_menu_preview(int active_item, MenuTheme theme) {
             options_buttons[OPTIONS_LANGUAGE].option = tVBOpt.LANGUAGE;
             for (int i = OPTIONS_COLOUR; i <= OPTIONS_LANGUAGE; i++) {
                 Button *option = &options_buttons[i];
-                u32 label_colour = option->disabled ? theme.disabled_text : theme.nav_text;
+                u32 label_colour = theme.disabled_text;
                 u32 value_colour = option->disabled ? theme.disabled_text : theme.option_text;
                 C2D_DrawText(&option->text, C2D_AlignLeft | C2D_WithColor,
                     136, 28 + i * 40, 0, 0.55, 0.55, label_colour);
@@ -807,17 +921,36 @@ static void draw_main_menu_preview(int active_item, MenuTheme theme) {
             }
             break;
         case MAIN_MENU_MULTI:
-            draw_preview_text("创建主机", 152, 52, 0.65, theme.nav_text);
-            draw_preview_text("加入房间", 152, 108, 0.65, theme.nav_text);
+            draw_preview_text("创建主机", 152, 52, 0.65, theme.disabled_text);
+            draw_preview_text("加入房间", 152, 108, 0.65, theme.disabled_text);
             break;
         case MAIN_MENU_ABOUT:
-            C2D_DrawSprite(&logo_sprite);
+            {
+                C2D_ImageTint tint;
+                C2D_PlainImageTint(&tint, theme.nav_selected_text, 1);
+                C2D_SpriteSetPos(&logo_sprite, 216, 28);
+                C2D_DrawSpriteTinted(&logo_sprite, &tint);
+            }
             C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor,
-                216, 62, 0, 0.35, 0.35, theme.nav_text);
+                216, 62, 0, 0.35, 0.35, theme.nav_selected_text);
             break;
         case MAIN_MENU_LOAD_ROM:
-            draw_preview_text(rom_display_path(tVBOpt.ROM_PATH[0] ? tVBOpt.ROM_PATH : "sdmc:/"),
-                136, 48, 0.5, theme.nav_text);
+            if (rom_preview_cache.valid) {
+                C2D_Text path_text;
+                C2D_TextBufClear(dynamic_textbuf);
+                C2D_TextParse(&path_text, dynamic_textbuf,
+                    rom_display_path(rom_preview_cache.path));
+                C2D_TextOptimize(&path_text);
+                C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor,
+                    136, 12, 0, 0.45, 0.45, theme.nav_selected_text);
+                int entries = rom_preview_cache.dir_count + rom_preview_cache.file_count;
+                for (int i = 0; i < entries && i < 6; i++) {
+                    const char *name = i < rom_preview_cache.dir_count ?
+                        rom_preview_cache.dirs[i] : rom_preview_cache.files[i - rom_preview_cache.dir_count];
+                    draw_preview_text(name, 136, 36 + i * 28, 0.45,
+                        i == rom_preview_cache.cursor ? theme.nav_selected_text : theme.disabled_text);
+                }
+            }
             break;
         default:
             break;
@@ -837,11 +970,22 @@ static void draw_main_menu_panel(void) {
                 break;
             }
         }
-        if (active_item >= 0) draw_main_menu_preview(active_item, theme);
+        if (active_item >= 0) {
+            if (active_item != main_menu_preview_item) {
+                main_menu_preview_item = active_item;
+                if (active_item == MAIN_MENU_LOAD_ROM)
+                    refresh_rom_preview(tVBOpt.ROM_PATH);
+                if (active_item == MAIN_MENU_SAVESTATES)
+                    refresh_savestate_cache();
+            }
+            draw_main_menu_preview(active_item, theme);
+        }
     }
 }
 
 static void first_menu(int initial_button) {
+    main_menu_preview_item = -1;
+    buttonLock = false;
     static bool attempted_forwarder = false;
     if (!attempted_forwarder) {
         attempted_forwarder = true;
@@ -917,6 +1061,8 @@ no_forwarder:
 }
 
 static void game_menu(int initial_button) {
+    main_menu_preview_item = -1;
+    buttonLock = false;
     for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++) {
         main_menu_buttons[i].hidden = false;
         main_menu_buttons[i].disabled = false;
@@ -1427,7 +1573,7 @@ static bool rom_loader_impl(char *message, bool refresh) {
                 C2D_DrawRectSolid(120, y, 0, 192, entry_height, clicked_entry == i ? menu_colours.row_selected_bg : menu_colours.panel_bg);
                 if (cursor == i) C2D_DrawRectSolid(124, y + entry_height - 8, 0, 184, 1, menu_colours.nav_selected_text);
                 C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, y + 8, 0, 0.5, 0.5,
-                    cursor == i ? menu_colours.row_selected_text : menu_colours.nav_text);
+                    cursor == i ? menu_colours.row_selected_text : menu_colours.disabled_text);
             }
             y += entry_height;
         }
@@ -1446,9 +1592,9 @@ static bool rom_loader_impl(char *message, bool refresh) {
             C2D_TextParse(&message_text, dynamic_textbuf, message);
             C2D_TextOptimize(&message_text);
             C2D_DrawText(&message_text, C2D_AlignLeft | C2D_WithColor, 128, 8, 0, 0.5, 0.5, menu_colours.nav_selected_text);
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 13, 0, 0.5, 0.5, menu_colours.nav_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 13, 0, 0.5, 0.5, menu_colours.disabled_text);
         } else {
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 13, 0, 0.5, 0.5, menu_colours.nav_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 13, 0, 0.5, 0.5, menu_colours.disabled_text);
         }
 
         // up button indicator
@@ -1534,8 +1680,8 @@ static void multiplayer_main(int initial_button, bool init_uds) {
         for (int i = MULTI_MAIN_HOST; i <= MULTI_MAIN_JOIN; i++) {
             multiplayer_main_buttons[i].themed = true;
             multiplayer_main_buttons[i].transparent = true;
-            multiplayer_main_buttons[i].text_colour = menu_theme().nav_text;
-            multiplayer_main_buttons[i].selected_colour = menu_theme().nav_selected_bg;
+            multiplayer_main_buttons[i].text_colour = menu_theme().disabled_text;
+            multiplayer_main_buttons[i].selected_colour = menu_theme().row_selected_bg;
             multiplayer_main_buttons[i].selected_text_colour = menu_theme().nav_selected_text;
         }
         C2D_DrawText(&text_multi_reset_on_join, C2D_AlignCenter | C2D_WithColor, 216, 156, 0, 0.45, 0.45, TINT_COLOR);
@@ -2697,8 +2843,8 @@ static void options(int initial_button) {
     refresh_menu_language();
     MenuTheme theme = menu_theme();
     for (int i = 0; i <= OPTIONS_LANGUAGE; i++) {
-        options_buttons[i].text_colour = theme.nav_text;
-        options_buttons[i].selected_colour = theme.nav_selected_bg;
+        options_buttons[i].text_colour = theme.disabled_text;
+        options_buttons[i].selected_colour = theme.row_selected_bg;
         options_buttons[i].selected_text_colour = theme.nav_selected_text;
     }
     LOOP_BEGIN(options_buttons, initial_button);
@@ -2877,11 +3023,12 @@ static bool areyousure(C2D_Text *message) {
 
 static void savestate_menu(int initial_button, int selected_state) {
     static char status[64];
-    savestate_buttons[LOAD_SAVESTATE].hidden = !emulation_hasstate(selected_state);
+    refresh_savestate_cache();
+    savestate_buttons[LOAD_SAVESTATE].hidden = !savestate_cache.exists[selected_state];
     MenuTheme theme = menu_theme();
     for (int i = SAVE_SAVESTATE; i <= LOAD_SAVESTATE; i++) {
-        savestate_buttons[i].text_colour = theme.nav_text;
-        savestate_buttons[i].selected_colour = theme.nav_selected_bg;
+        savestate_buttons[i].text_colour = theme.disabled_text;
+        savestate_buttons[i].selected_colour = theme.row_selected_bg;
         savestate_buttons[i].selected_text_colour = theme.nav_selected_text;
     }
 
@@ -2890,31 +3037,16 @@ static void savestate_menu(int initial_button, int selected_state) {
         int keys_down = hidKeysDown();
         if (keys_down & KEY_UP) selected_state = selected_state == 0 ? 9 : selected_state - 1;
         if (keys_down & KEY_DOWN) selected_state = selected_state == 9 ? 0 : selected_state + 1;
-        savestate_buttons[LOAD_SAVESTATE].hidden = !emulation_hasstate(selected_state);
+        savestate_buttons[LOAD_SAVESTATE].hidden = !savestate_cache.exists[selected_state];
         C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
         C2D_DrawText(&text_savestate_menu, C2D_AlignCenter | C2D_WithColor,
             216, 16, 0, 0.7, 0.7, theme.nav_selected_text);
         for (int slot = 0; slot < 10; slot++) {
-            char row[32];
-            time_t mtime;
-            if (emulation_state_mtime(slot, &mtime)) {
-                struct tm *local = localtime(&mtime);
-                char time_text[24];
-                if (local) strftime(time_text, sizeof(time_text), "%m-%d %H:%M", local);
-                else strcpy(time_text, "--");
-                snprintf(row, sizeof(row), "%02d  %s", slot + 1, time_text);
-            } else {
-                snprintf(row, sizeof(row), "%02d  --", slot + 1);
-            }
-            C2D_Text row_text;
-            C2D_TextBufClear(dynamic_textbuf);
-            C2D_TextParse(&row_text, dynamic_textbuf, row);
-            C2D_TextOptimize(&row_text);
             if (slot == selected_state)
                 C2D_DrawRectSolid(128, 36 + slot * 15, 0, 176, 15, theme.row_selected_bg);
-            C2D_DrawText(&row_text, C2D_AlignLeft | C2D_WithColor,
+            C2D_DrawText(&savestate_cache.texts[slot], C2D_AlignLeft | C2D_WithColor,
                 136, 38 + slot * 15, 0, 0.45, 0.45,
-                slot == selected_state ? theme.row_selected_text : theme.nav_text);
+                slot == selected_state ? theme.row_selected_text : theme.disabled_text);
         }
         if (status[0]) {
             C2D_Text status_text;
@@ -2935,6 +3067,7 @@ static void savestate_menu(int initial_button, int selected_state) {
                 snprintf(status, sizeof(status), "保存失败");
             else
                 snprintf(status, sizeof(status), "已保存到 %02d", selected_state + 1);
+            refresh_savestate_cache();
             [[gnu::musttail]] return savestate_menu(SAVE_SAVESTATE, selected_state);
         case LOAD_SAVESTATE:
             {
@@ -2951,11 +3084,13 @@ static void savestate_menu(int initial_button, int selected_state) {
 static void about(void) {
     C2D_SpriteSetPos(&logo_sprite, 216, 28);
     C2D_ImageTint tint;
-    C2D_PlainImageTint(&tint, C2D_Color32(255, 0, 0, 255), 1);
+    MenuTheme theme = menu_theme();
+    C2D_PlainImageTint(&tint, theme.nav_selected_text, 1);
     LOOP_BEGIN(about_buttons, 0);
         draw_main_menu_shell(MAIN_MENU_ABOUT);
         C2D_DrawSpriteTinted(&logo_sprite, &tint);
-        C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor, 216, 62, 0, 0.35, 0.35, TINT_COLOR);
+        C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor,
+            216, 62, 0, 0.35, 0.35, theme.nav_selected_text);
     LOOP_END(about_buttons);
     return;
 }
@@ -3042,6 +3177,7 @@ static bool load_rom(char *rom_message) {
         game_running = true;
         loadGameOptions();
         last_savestate = 0;
+        savestate_cache.valid = false;
         return true;
     } else {
         game_running = false;
@@ -3101,11 +3237,19 @@ static inline int handle_buttons(Button buttons[], int count) {
                 int buttonx = (buttons[i].x + (buttons[i].w / 2)) - ((buttons[i].w / 2) * xaxis);
                 int buttony = (buttons[i].y + (buttons[i].h / 2)) - ((buttons[i].h / 2) * yaxis);
 
-                if (((kDown & KEY_UP)    && buttony >= selecty) ||
-                    ((kDown & KEY_DOWN)  && buttony <= selecty) ||
-                    ((kDown & KEY_LEFT)  && buttonx >= selectx) ||
-                    ((kDown & KEY_RIGHT) && buttonx <= selectx))
-                {
+                if ((kDown & KEY_UP) && !menu_axis_is_candidate(
+                        selectedButton->y, selectedButton->y + selectedButton->h,
+                        buttons[i].y, buttons[i].y + buttons[i].h, -1)) continue;
+                if ((kDown & KEY_DOWN) && !menu_axis_is_candidate(
+                        selectedButton->y, selectedButton->y + selectedButton->h,
+                        buttons[i].y, buttons[i].y + buttons[i].h, 1)) continue;
+                if ((kDown & KEY_LEFT) && !menu_axis_is_candidate(
+                        selectedButton->x, selectedButton->x + selectedButton->w,
+                        buttons[i].x, buttons[i].x + buttons[i].w, -1)) continue;
+                if ((kDown & KEY_RIGHT) && !menu_axis_is_candidate(
+                        selectedButton->x, selectedButton->x + selectedButton->w,
+                        buttons[i].x, buttons[i].x + buttons[i].w, 1)) continue;
+                if (!xaxis && !yaxis) {
                     continue;
                 }
 
@@ -3329,6 +3473,7 @@ void guiInit(void) {
 
     static_textbuf = C2D_TextBufNew(4096);
     dynamic_textbuf = C2D_TextBufNew(4096);
+    savestate_textbuf = C2D_TextBufNew(4096);
     language_textbuf = C2D_TextBufNew(4096);
     STATIC_TEXT(&text_A, "A")
     STATIC_TEXT(&text_B, "B")

@@ -10,6 +10,11 @@ int main(void) {
         {0x4F593B, 0x417E58, 0x3A9C75, 0x4BAB95},
     };
 
+    assert(COLOUR_SHADE_BACKGROUND == 0);
+    assert(COLOUR_SHADE_DISABLED == 1);
+    assert(COLOUR_SHADE_READY == 2);
+    assert(COLOUR_SHADE_ACTIVE == 3);
+
     for (int mode = 0; mode < COLOUR_MODE_COUNT; mode++)
         for (int shade = 0; shade < COLOUR_SHADE_COUNT; shade++)
             assert(colour_mode_value(mode, shade) == expected[mode][shade]);
