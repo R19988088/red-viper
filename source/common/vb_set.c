@@ -135,6 +135,7 @@ void setDefaults(void) {
     tVBOpt.MTINT[3][1] = tVBOpt.MTINT[3][2] = tVBOpt.MTINT[3][3] = 0;
     tVBOpt.STINT[3][0] = tVBOpt.STINT[3][1] = tVBOpt.STINT[3][2] = 1.0;
     tVBOpt.SLIDERMODE = SLIDER_3DS;
+    tVBOpt.LANGUAGE = LANGUAGE_CHINESE;
     tVBOpt.DEFAULT_EYE = 0;
     tVBOpt.PERF_INFO = false;
     tVBOpt.ROM_PATH[0] = 0;
@@ -220,6 +221,8 @@ static int handler(void* user, const char* section, const char* name,
 
     } else if (MATCH("vbopt", "slidermode")) {
         pconfig->SLIDERMODE = atoi(value);
+    } else if (MATCH("vbopt", "language")) {
+        pconfig->LANGUAGE = atoi(value);
     } else if (MATCH("vbopt", "default_eye")) {
         pconfig->DEFAULT_EYE = atoi(value);
     } else if (MATCH("vbopt", "antiflicker")) {
@@ -452,6 +455,8 @@ int loadFileOptions(void) {
     int ret = ini_parse(CONFIG_FILENAME, handler, &tVBOpt);
     tVBOpt.MULTICOL = true;
     tVBOpt.MULTIID = colour_mode_normalize(tVBOpt.MULTIID);
+    if (tVBOpt.LANGUAGE < LANGUAGE_CHINESE || tVBOpt.LANGUAGE >= LANGUAGE_COUNT)
+        tVBOpt.LANGUAGE = LANGUAGE_CHINESE;
     tVBOpt.ANAGLYPH = false;
     if (!ret) tVBOpt.GAME_SETTINGS = false;
     tVBOpt.MODIFIED = false;
@@ -479,6 +484,7 @@ void writeOptionsFile(FILE* f, bool global) {
     fprintf(f, "tint=%d\n", tVBOpt.TINT);
     fprintf(f, "multicolid=%d\n", tVBOpt.MULTIID);
     fprintf(f, "slidermode=%d\n", tVBOpt.SLIDERMODE);
+    fprintf(f, "language=%d\n", tVBOpt.LANGUAGE);
     fprintf(f, "default_eye=%d\n", tVBOpt.DEFAULT_EYE);
     fprintf(f, "antiflicker=%d\n", tVBOpt.ANTIFLICKER);
     fprintf(f, "perfinfo=%d\n", tVBOpt.PERF_INFO);

@@ -20,6 +20,13 @@
 #define SLIDER_3DS  0
 #define SLIDER_VB   1
 
+/* User interface language.  Keep Chinese as the zero/default value so
+ * existing configuration files continue to select the original UI. */
+#define LANGUAGE_CHINESE  0
+#define LANGUAGE_JAPANESE 1
+#define LANGUAGE_ENGLISH  2
+#define LANGUAGE_COUNT    3
+
 #define CONFIG_FILENAME "sdmc:/config/red-viper/rv_config.ini"
 #define CONFIG_FILENAME_LEGACY "rv_config.ini"
 
@@ -77,6 +84,7 @@ typedef struct VB_OPT {
     RENDERMODE_t RENDERMODE;
     bool  SOFT_FLUSH;
     int   SLIDERMODE; // 0 - 3ds (positive parallax), 1 - virtual boy (full parallax)
+    int   LANGUAGE;   // UI language: Chinese, Japanese, or English
     int   DEFAULT_EYE; // 0 - left, 1 - right
     int   PAUSE_RIGHT; // right side of pause block on touch screen
     int   TOUCH_AX;
