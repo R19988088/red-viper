@@ -677,7 +677,12 @@ static void draw_logo(void) {
 
 static void style_main_menu(void) {
     MenuTheme theme = menu_theme();
+    int y = 8;
     for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
+        if (!main_menu_buttons[i].hidden) {
+            main_menu_buttons[i].y = y;
+            y += 28;
+        }
         main_menu_buttons[i].transparent = true;
         main_menu_buttons[i].themed = true;
         main_menu_buttons[i].colour = 0;
