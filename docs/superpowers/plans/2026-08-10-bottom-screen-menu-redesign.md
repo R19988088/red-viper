@@ -362,17 +362,17 @@ make clean
 make release-3ds -j2
 ```
 
-预期：生成 `red-viper.cci`，编译器无数组越界、未使用静态函数或格式化时间相关警告。
+预期：生成 `red-viper.cia`，编译器无数组越界、未使用静态函数或格式化时间相关警告。
 
 - [ ] **步骤 3：核验最终产物**
 
 ```bash
-test -s red-viper.cci
-file red-viper.cci
-shasum -a 256 red-viper.cci
+test -s red-viper.cia
+file red-viper.cia
+shasum -a 256 red-viper.cia
 ```
 
-预期：CCI 文件非空，记录最终 SHA-256。
+预期：CIA 文件非空，记录最终 SHA-256。
 
 - [ ] **步骤 4：在 3DS 上验收导航和即时设置**
 

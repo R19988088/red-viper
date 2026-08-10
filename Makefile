@@ -220,7 +220,7 @@ ifeq ($(strip $(NO_SMDH)),)
 .PHONY: all
 all	:	$(OUTPUT).3dsx $(OUTPUT).smdh $(OUTPUT).cia
 endif
-3ds	:	$(OUTPUT).cci
+3ds	:	$(OUTPUT).cia
 $(OUTPUT).3dsx	:	$(OUTPUT).elf $(_3DSXDEPS)
 
 $(OFILES_SOURCES) : $(HFILES)
@@ -239,11 +239,6 @@ cia.rsf:
 $(OUTPUT).cia: banner.bnr icon.icn cia.rsf $(OUTPUT).elf $(TOPDIR)/$(ROMFS)/*
 	$(MAKEROM) -f cia -o $(OUTPUT).cia -rsf cia.rsf -target t -exefslogo -elf $(OUTPUT).elf -icon icon.icn -banner banner.bnr -major ${VERSION_MAJOR} -minor ${VERSION_MINOR} -micro ${VERSION_MICRO}
 	@echo "built ... $(notdir $@)"
-
-$(OUTPUT).cci: banner.bnr icon.icn cia.rsf $(OUTPUT).elf $(TOPDIR)/$(ROMFS)/*
-	$(MAKEROM) -f cci -o $(OUTPUT).cci -rsf cia.rsf -target t -exefslogo -elf $(OUTPUT).elf -icon icon.icn -banner banner.bnr
-	@echo "built ... $(notdir $@)"
-
 
 #---------------------------------------------------------------------------------
 # you need a rule like this for each extension you use as binary data

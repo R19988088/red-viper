@@ -18,10 +18,10 @@ jobs:
         with:
           submodules: true
 
-      - name: Build release CCI
+      - name: Build release CIA
         run: git config --global --add safe.directory "$PWD" && make release-3ds
 
-      - name: Publish direct 3DS download
+      - name: Publish direct CIA download
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -41,11 +41,11 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Content-Type: application/octet-stream" \
-            --data-binary @red-viper.cci \
-            "${upload_url}?name=red-viper.cci"
-          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/red-viper.cci"
+            --data-binary @red-viper.cia \
+            "${upload_url}?name=red-viper.cia"
+          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/red-viper.cia"
           {
-            echo "## Red Viper 3DS Release"
+            echo "## Red Viper CIA Release"
             echo
-            echo "[Download red-viper.cci](${download_url})"
+            echo "[Download red-viper.cia](${download_url})"
           } >> "$GITHUB_STEP_SUMMARY"
