@@ -142,13 +142,38 @@ static inline int u16len(const u16 *s) {
 }
 
 typedef struct Button_t Button;
+typedef struct {
+    u32 nav_text;
+    u32 nav_selected_bg;
+    u32 nav_selected_text;
+    u32 panel_bg;
+    u32 row_selected_bg;
+    u32 row_selected_text;
+} MenuTheme;
+
+static MenuTheme menu_theme(void) {
+    int mode = colour_mode_normalize(tVBOpt.MULTIID);
+    return (MenuTheme) {
+        .nav_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 2)), COLOR_G(colour_mode_value(mode, 2)), COLOR_B(colour_mode_value(mode, 2)), 255),
+        .nav_selected_bg = COLOR_BRIGHTNESS(colour_mode_value(mode, 1), 0.70f),
+        .nav_selected_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 3)), COLOR_G(colour_mode_value(mode, 3)), COLOR_B(colour_mode_value(mode, 3)), 255),
+        .panel_bg = COLOR_BRIGHTNESS(colour_mode_value(mode, 1), 0.45f),
+        .row_selected_bg = COLOR_BRIGHTNESS(colour_mode_value(mode, 2), 0.55f),
+        .row_selected_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 3)), COLOR_G(colour_mode_value(mode, 3)), COLOR_B(colour_mode_value(mode, 3)), 255),
+    };
+}
+
 struct Button_t {
     char *str;
     bool back_action, no_action, up_action;
     float x, y, w, h;
     bool show_toggle, toggle, show_option, hidden, draw_selected_rect;
+    bool transparent, disabled, themed;
     int option;
     int colour;
+    u32 text_colour;
+    u32 selected_colour;
+    u32 selected_text_colour;
     C2D_Text *toggle_text_on;
     C2D_Text *toggle_text_off;
     C2D_Text **option_texts;
@@ -205,29 +230,24 @@ static Button no_buttons[] = {{.hidden = true}};
 static void main_menu(int initial_button);
 
 static void first_menu(int initial_button);
-static Button first_menu_buttons[] = {
-    {.str="加载 ROM", .x=16, .y=16, .w=288, .h=144},
-    {.str="联机", .x=0, .y=176, .w=80, .h=64},
-    {.str="选项", .x=240, .y=176, .w=80, .h=64},
-    {.str="退出", .x=112, .y=192, .w=96, .h=48},
-};
-
 static void game_menu(int initial_button);
-static Button game_menu_buttons[] = {
-    #define MAIN_MENU_LOAD_ROM 0
-    {.str="加载 ROM", .x=232 - 16, .y=64, .w=80 + 16, .h=80},
-    #define MAIN_MENU_MULTI 1
-    {.str="联机", .x=0, .y=176, .w=80, .h=64},
-    #define MAIN_MENU_OPTIONS 2
-    {.str="选项", .x=240, .y=176, .w=80, .h=64},
-    #define MAIN_MENU_QUIT 3
-    {.str="退出", .x=112, .y=192, .w=96, .h=48},
-    #define MAIN_MENU_RESUME 4
-    {.str="继续游戏", .x=0, .y=0, .w=320, .h=48},
-    #define MAIN_MENU_RESET 5
-    {.str="重置", .x=8, .y=64, .w=80 + 16, .h=80},
-    #define MAIN_MENU_SAVESTATES 6
-    {.str="存档", .x=112, .y=64, .w=80 + 16, .h=80},
+static Button main_menu_buttons[] = {
+    #define MAIN_MENU_RESUME 0
+    {.str="继续游戏", .x=8, .y=8, .w=104, .h=28, .transparent=true, .themed=true},
+    #define MAIN_MENU_RESET 1
+    {.str="重新开始", .x=8, .y=36, .w=104, .h=28, .transparent=true, .themed=true},
+    #define MAIN_MENU_SAVESTATES 2
+    {.str="游戏进度", .x=8, .y=64, .w=104, .h=28, .transparent=true, .themed=true},
+    #define MAIN_MENU_LOAD_ROM 3
+    {.str="加载 ROM", .x=8, .y=92, .w=104, .h=28, .transparent=true, .themed=true},
+    #define MAIN_MENU_MULTI 4
+    {.str="联机", .x=8, .y=120, .w=104, .h=28, .transparent=true, .themed=true},
+    #define MAIN_MENU_OPTIONS 5
+    {.str="选项", .x=8, .y=148, .w=104, .h=28, .transparent=true, .themed=true},
+    #define MAIN_MENU_ABOUT 6
+    {.str="关于", .x=8, .y=176, .w=104, .h=28, .transparent=true, .themed=true},
+    #define MAIN_MENU_QUIT 7
+    {.str="退出", .x=8, .y=204, .w=104, .h=28, .transparent=true, .themed=true},
 };
 
 static void multiplayer_menu(int initial_button);
@@ -468,31 +488,23 @@ static Button touchscreen_settings_buttons[] = {
 
 static void options(int initial_button);
 static Button options_buttons[] = {
-    #define OPTIONS_VIDEO 0
-    {.str="视频\n设置", .x=16, .y=16, .w=96-8, .h=48},
-    #define OPTIONS_CONTROLS 1
-    {.str="控制", .x=112-2, .y=16, .w=96+4, .h=48},
-    #define OPTIONS_SOUND 2
-    {.str="声音", .x=208+8, .y=16, .w=96-8, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
-    #define OPTIONS_PERF 3
-    {.str="性能\n设置", .x=16, .y=80, .w=96-8, .h=48},
-    #define OPTIONS_FF 4
-    {.str="快进", .x=112-2, .y=80, .w=96+4, .h=48, .show_toggle=true, .toggle_text_on=&text_toggle, .toggle_text_off=&text_hold},
-    #define OPTIONS_ABOUT 5
-    {.str="关于", .x=208+8, .y=80, .w=96-8, .h=48},
-    #define OPTIONS_SAVE_GLOBAL 6
-    {.str="保存\n(全局)", .x=16, .y=144, .w=96-8, .h=48},
-    #define OPTIONS_SAVE_GAME 7
-    {.str="保存\n(游戏)", .x=112-2, .y=144, .w=96+4, .h=48},
-    #define OPTIONS_DISCARD 8
-    {.str="放弃更改", .x=208+8, .y=144, .w=96-8, .h=48},
-    #define OPTIONS_RESET_TO_GLOBAL 9
-    {.str="恢复\n全局", .y=144, .h=48},
-    #define OPTIONS_BACK  10
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
-    #define OPTIONS_DEBUG 11
-    {.str="保存调试信息", .x=170, .y=208, .w=150, .h=32},
+    #define OPTIONS_COLOUR 0
+    {.str="色彩模式", .x=120, .y=32, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_colour_mode_1, &text_colour_mode_2, &text_colour_mode_3}, .transparent=true, .themed=true},
+    #define OPTIONS_3D 1
+    {.str="3D 模式", .x=120, .y=88, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_anaglyph}, .transparent=true, .themed=true},
+    #define OPTIONS_SLIDER 2
+    {.str="滑块模式", .x=120, .y=144, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_vbipd}, .transparent=true, .themed=true},
+    #define OPTIONS_BACK 3
+    {.hidden=true, .back_action=true},
 };
+
+/* Legacy subpages remain compiled for the input/configuration helpers, but are
+ * no longer reachable from the compact options screen. */
+#define OPTIONS_VIDEO OPTIONS_BACK
+#define OPTIONS_CONTROLS OPTIONS_BACK
+#define OPTIONS_PERF OPTIONS_BACK
+#define OPTIONS_ABOUT OPTIONS_BACK
+#define OPTIONS_DEBUG OPTIONS_BACK
 
 static void video_settings(int initial_button);
 static Button video_settings_buttons[] = {
@@ -579,31 +591,19 @@ static Button dev_options_buttons[] = {
 static bool areyousure(C2D_Text *message);
 static Button areyousure_buttons[] = {
     #define AREYOUSURE_YES 0
-    {.str="是", .x=160-48-32, .y=180, .w=64, .h=48},
+    {.str=NULL, .x=160-48-32, .y=180, .w=64, .h=48},
     #define AREYOUSURE_NO 1
-    {.str="否", .no_action=true, .x=160+32, .y=180, .w=64, .h=48},
+    {.str=NULL, .no_action=true, .x=160+32, .y=180, .w=64, .h=48},
 };
 
 static void savestate_menu(int initial_button, int selected_state);
 static Button savestate_buttons[] = {
     #define SAVESTATE_BACK 0
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=60, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
     #define SAVE_SAVESTATE 1
-    {.str="保存", .x=80, .y=170, .w=70, .h=70},
+    {.str="保存", .x=136, .y=196, .w=72, .h=32, .themed=true, .transparent=true},
     #define LOAD_SAVESTATE 2
-    {.str="加载", .x=320 - 150, .y=170, .w=70, .h=70},
-    #define DELETE_SAVESTATE 3
-    {.str="删除", .x=260, .y=208, .w=60, .h=32},
-    #define PREV_SAVESTATE 4
-    {.str="<\n\uE004", .x=16, .y=60, .w=40, .h=100},
-    #define NEXT_SAVESTATE 5
-    {.str=">\n\uE005", .x=320 - 56, .y=60, .w=40, .h=100},
-};
-
-static void savestate_confirm(char *message, int last_button, int selected_state);
-static Button savestate_confirm_buttons[] = {
-    {.str="返回游戏", .x=160-96, .y=140, .w=96*2, .h=48},
-    {.str="返回菜单", .x=160-96, .y=190, .w=96*2, .h=48},
+    {.str="加载", .x=224, .y=196, .w=72, .h=32, .themed=true, .transparent=true},
 };
 
 static void sound_error(void);
@@ -613,12 +613,12 @@ static Button sound_error_buttons[] = {
 
 static void about(void);
 static Button about_buttons[] = {
-    {.str="返回", .back_action=true, .x=160-48, .y=180, .w=48*2, .h=48},
+    {.str=NULL, .back_action=true, .hidden=true, .x=160-48, .y=180, .w=48*2, .h=48},
 };
 
 static bool load_rom(char *rom_message);
 static Button load_rom_buttons[] = {
-    {.str="卸载并取消", .x=160-80, .y=180, .w=80*2, .h=48},
+    {.str="卸载并取消", .no_action=true, .x=160-80, .y=180, .w=80*2, .h=48},
 };
 
 static void forwarder_error(int err);
@@ -627,7 +627,7 @@ static Button forwarder_error_buttons[] = {
 };
 
 #define SETUP_ALL_BUTTONS \
-    SETUP_BUTTONS(game_menu_buttons); \
+    SETUP_BUTTONS(main_menu_buttons); \
     SETUP_BUTTONS(multiplayer_menu_buttons); \
     SETUP_BUTTONS(rom_loader_buttons); \
     SETUP_BUTTONS(multiplayer_main_buttons); \
@@ -652,9 +652,7 @@ static Button forwarder_error_buttons[] = {
     SETUP_BUTTONS(about_buttons); \
     SETUP_BUTTONS(load_rom_buttons); \
     SETUP_BUTTONS(areyousure_buttons); \
-    SETUP_BUTTONS(savestate_buttons); \
-    SETUP_BUTTONS(savestate_confirm_buttons); \
-    SETUP_BUTTONS(first_menu_buttons);
+    SETUP_BUTTONS(savestate_buttons);
 
 static int last_savestate = 0;
 
@@ -675,6 +673,27 @@ static void draw_logo(void) {
     }
     C2D_ViewReset();
     C2D_SceneBegin(screen);
+}
+
+static void style_main_menu(void) {
+    MenuTheme theme = menu_theme();
+    for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
+        main_menu_buttons[i].transparent = true;
+        main_menu_buttons[i].themed = true;
+        main_menu_buttons[i].colour = 0;
+        main_menu_buttons[i].text_colour = theme.nav_text;
+        main_menu_buttons[i].selected_colour = theme.nav_selected_bg;
+        main_menu_buttons[i].selected_text_colour = theme.nav_selected_text;
+    }
+}
+
+static void draw_main_menu_panel(void) {
+    MenuTheme theme = menu_theme();
+    C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+    if (selectedButton) {
+        C2D_DrawText(&selectedButton->text, C2D_AlignCenter | C2D_WithColor,
+            216, 24, 0, 0.65, 0.65, theme.nav_selected_text);
+    }
 }
 
 static void first_menu(int initial_button) {
@@ -715,10 +734,14 @@ static void first_menu(int initial_button) {
     }
 
     no_forwarder:
-    LOOP_BEGIN(first_menu_buttons, initial_button);
+    for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++)
+        main_menu_buttons[i].hidden = true;
+    style_main_menu();
+    LOOP_BEGIN(main_menu_buttons, initial_button < MAIN_MENU_LOAD_ROM ? MAIN_MENU_LOAD_ROM : initial_button);
         draw_logo();
+        draw_main_menu_panel();
         if (hidKeysDown() & KEY_Y) loop = false;
-    LOOP_END(first_menu_buttons);
+    LOOP_END(main_menu_buttons);
     if (hidKeysDown() & KEY_Y) [[gnu::musttail]] return vblink();
     guiop = 0;
     switch (button) {
@@ -730,6 +753,9 @@ static void first_menu(int initial_button) {
         case MAIN_MENU_OPTIONS:
             options(0);
             [[gnu::musttail]] return first_menu(MAIN_MENU_OPTIONS);
+        case MAIN_MENU_ABOUT:
+            about();
+            [[gnu::musttail]] return first_menu(MAIN_MENU_ABOUT);
         case MAIN_MENU_QUIT:
             if (areyousure(&text_areyousure_exit)) {
             guiop = GUIEXIT;
@@ -739,16 +765,14 @@ static void first_menu(int initial_button) {
 }
 
 static void game_menu(int initial_button) {
-    if (tVBOpt.FORWARDER) {
-        game_menu_buttons[MAIN_MENU_LOAD_ROM].hidden = true;
-        game_menu_buttons[MAIN_MENU_RESET].x = 16;
-        game_menu_buttons[MAIN_MENU_RESET].w = 80 + 48;
-        game_menu_buttons[MAIN_MENU_SAVESTATES].x = 224 - 48;
-        game_menu_buttons[MAIN_MENU_SAVESTATES].w = 80 + 48;
-    }
-    LOOP_BEGIN(game_menu_buttons, initial_button);
+    for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++)
+        main_menu_buttons[i].hidden = false;
+    main_menu_buttons[MAIN_MENU_LOAD_ROM].hidden = tVBOpt.FORWARDER;
+    style_main_menu();
+    LOOP_BEGIN(main_menu_buttons, initial_button);
+        draw_main_menu_panel();
         if (!tVBOpt.FORWARDER && (hidKeysDown() & KEY_Y)) loop = false;
-    LOOP_END(game_menu_buttons);
+    LOOP_END(main_menu_buttons);
     if (!tVBOpt.FORWARDER && (hidKeysDown() & KEY_Y)) [[gnu::musttail]] return vblink();
     switch (button) {
         case MAIN_MENU_LOAD_ROM:
@@ -760,6 +784,9 @@ static void game_menu(int initial_button) {
         case MAIN_MENU_OPTIONS:
             options(0);
             [[gnu::musttail]] return game_menu(MAIN_MENU_OPTIONS);
+        case MAIN_MENU_ABOUT:
+            about();
+            [[gnu::musttail]] return game_menu(MAIN_MENU_ABOUT);
         case MAIN_MENU_QUIT:
             if (areyousure(&text_areyousure_exit)) {
                 guiop = AKILL | GUIEXIT;
@@ -772,18 +799,15 @@ static void game_menu(int initial_button) {
                 return;
             }
         case MAIN_MENU_RESET:
-            if (areyousure(&text_areyousure_reset)) {
-                // clear screen buffer
-                for (int i = 0; i < 2; i++) {
-                    C2D_TargetClear(screenTargetHard[i], 0);
-                    C2D_TargetClear(finalScreen[i], 0);
-                }
-                C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-                video_flush(true);
-                C3D_FrameEnd(0);
-                guiop = AKILL | VBRESET;
-                return;
-            } else [[gnu::musttail]] return game_menu(MAIN_MENU_RESET);
+            for (int i = 0; i < 2; i++) {
+                C2D_TargetClear(screenTargetHard[i], 0);
+                C2D_TargetClear(finalScreen[i], 0);
+            }
+            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+            video_flush(true);
+            C3D_FrameEnd(0);
+            guiop = AKILL | VBRESET;
+            return;
         case MAIN_MENU_SAVESTATES:
             [[gnu::musttail]] return savestate_menu(0, last_savestate);
     }
@@ -2462,107 +2486,32 @@ static void dev_options(int initial_button) {
 
 static void save_debug_info(void);
 static void options(int initial_button) {
-    options_buttons[OPTIONS_FF].toggle = tVBOpt.FF_TOGGLE;
-    options_buttons[OPTIONS_SOUND].toggle = tVBOpt.SOUND;
-    options_buttons[OPTIONS_PERF].hidden = DEBUGLEVEL == 0;
-    options_buttons[OPTIONS_DEBUG].hidden = DEBUGLEVEL == 0 || !game_running;
-    options_buttons[OPTIONS_BACK].hidden = tVBOpt.MODIFIED;
-    if (game_running) {
-        if (tVBOpt.GAME_SETTINGS) {
-            if (tVBOpt.MODIFIED) {
-                options_buttons[OPTIONS_SAVE_GLOBAL].hidden = false;
-                options_buttons[OPTIONS_SAVE_GLOBAL].x = 16;
-                options_buttons[OPTIONS_SAVE_GLOBAL].w = 96-8;
-                options_buttons[OPTIONS_SAVE_GAME].hidden = false;
-                options_buttons[OPTIONS_SAVE_GAME].x = 112-2;
-                options_buttons[OPTIONS_SAVE_GAME].w = 96+4;
-                options_buttons[OPTIONS_DISCARD].hidden = false;
-                options_buttons[OPTIONS_DISCARD].x = 208+8;
-                options_buttons[OPTIONS_DISCARD].w = 96+4;
-                options_buttons[OPTIONS_RESET_TO_GLOBAL].hidden = true;
-            } else {
-                options_buttons[OPTIONS_SAVE_GLOBAL].hidden = false;
-                options_buttons[OPTIONS_SAVE_GLOBAL].x = 16;
-                options_buttons[OPTIONS_SAVE_GLOBAL].w = 128;
-                options_buttons[OPTIONS_RESET_TO_GLOBAL].hidden = false;
-                options_buttons[OPTIONS_RESET_TO_GLOBAL].x = 176;
-                options_buttons[OPTIONS_RESET_TO_GLOBAL].w = 128;
-                options_buttons[OPTIONS_SAVE_GAME].hidden = true;
-                options_buttons[OPTIONS_DISCARD].hidden = true;
-            }
-        } else {
-            if (tVBOpt.MODIFIED) {
-                options_buttons[OPTIONS_SAVE_GLOBAL].hidden = false;
-                options_buttons[OPTIONS_SAVE_GLOBAL].x = 16;
-                options_buttons[OPTIONS_SAVE_GLOBAL].w = 96-8;
-                options_buttons[OPTIONS_SAVE_GAME].hidden = false;
-                options_buttons[OPTIONS_SAVE_GAME].x = 112-2;
-                options_buttons[OPTIONS_SAVE_GAME].w = 96+4;
-                options_buttons[OPTIONS_DISCARD].hidden = false;
-                options_buttons[OPTIONS_DISCARD].x = 208+8;
-                options_buttons[OPTIONS_DISCARD].w = 96+4;
-                options_buttons[OPTIONS_RESET_TO_GLOBAL].hidden = true;
-            } else {
-                options_buttons[OPTIONS_SAVE_GLOBAL].hidden = true;
-                options_buttons[OPTIONS_SAVE_GAME].hidden = true;
-                options_buttons[OPTIONS_DISCARD].hidden = true;
-                options_buttons[OPTIONS_RESET_TO_GLOBAL].hidden = true;
-            }
-        }
-    } else {
-        if (tVBOpt.MODIFIED) {
-            options_buttons[OPTIONS_SAVE_GLOBAL].hidden = false;
-            options_buttons[OPTIONS_SAVE_GLOBAL].x = 16;
-            options_buttons[OPTIONS_SAVE_GLOBAL].w = 128;
-            options_buttons[OPTIONS_DISCARD].hidden = false;
-            options_buttons[OPTIONS_DISCARD].x = 176;
-            options_buttons[OPTIONS_DISCARD].w = 128;
-            options_buttons[OPTIONS_SAVE_GAME].hidden = true;
-            options_buttons[OPTIONS_RESET_TO_GLOBAL].hidden = true;
-        } else {
-            options_buttons[OPTIONS_SAVE_GLOBAL].hidden = true;
-            options_buttons[OPTIONS_SAVE_GAME].hidden = true;
-            options_buttons[OPTIONS_DISCARD].hidden = true;
-            options_buttons[OPTIONS_RESET_TO_GLOBAL].hidden = true;
-        }
+    options_buttons[OPTIONS_COLOUR].option = colour_mode_normalize(tVBOpt.MULTIID);
+    options_buttons[OPTIONS_3D].option = tVBOpt.ANAGLYPH ? 1 : 0;
+    options_buttons[OPTIONS_SLIDER].option = tVBOpt.SLIDERMODE ? 1 : 0;
+    MenuTheme theme = menu_theme();
+    for (int i = 0; i < 3; i++) {
+        options_buttons[i].text_colour = theme.nav_text;
+        options_buttons[i].selected_colour = theme.nav_selected_bg;
+        options_buttons[i].selected_text_colour = theme.nav_selected_text;
     }
     LOOP_BEGIN(options_buttons, initial_button);
+        C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+        if (hidKeysDown() & KEY_B) loop = false;
     LOOP_END(options_buttons);
     switch (button) {
-        case OPTIONS_VIDEO: // Video settings
-            [[gnu::musttail]] return video_settings(0);
-        case OPTIONS_FF: // Fast forward
-            tVBOpt.FF_TOGGLE = !tVBOpt.FF_TOGGLE;
-            tVBOpt.MODIFIED = true;
-            [[gnu::musttail]] return options(OPTIONS_FF);
-        case OPTIONS_SOUND: // Sound
-            tVBOpt.SOUND = !tVBOpt.SOUND;
-            [[gnu::musttail]] return options(OPTIONS_SOUND);
-        case OPTIONS_PERF: // Developer settings
-            [[gnu::musttail]] return dev_options(0);
-        case OPTIONS_CONTROLS: // Controls
-            [[gnu::musttail]] return controls(0);
-        case OPTIONS_ABOUT: // About
-            [[gnu::musttail]] return about();
-        case OPTIONS_BACK: // Back
-            {return;}
-        case OPTIONS_DEBUG: // Save debug info
-            [[gnu::musttail]] return save_debug_info();
-        case OPTIONS_SAVE_GLOBAL:
-            if (tVBOpt.GAME_SETTINGS) deleteGameOptions();
+        case OPTIONS_COLOUR:
+            tVBOpt.MULTIID = (tVBOpt.MULTIID + 1) % COLOUR_MODE_COUNT;
             saveFileOptions();
-            [[gnu::musttail]] return options(OPTIONS_BACK);
-        case OPTIONS_RESET_TO_GLOBAL:
-            if (tVBOpt.GAME_SETTINGS) deleteGameOptions();
-            loadFileOptions();
-            [[gnu::musttail]] return options(OPTIONS_BACK);
-        case OPTIONS_SAVE_GAME:
-            saveGameOptions();
-            [[gnu::musttail]] return options(OPTIONS_BACK);
-        case OPTIONS_DISCARD:
-            loadFileOptions();
-            if (game_running) loadGameOptions();
-            [[gnu::musttail]] return options(OPTIONS_BACK);
+            [[gnu::musttail]] return options(OPTIONS_COLOUR);
+        case OPTIONS_3D:
+            toggleAnaglyph(!tVBOpt.ANAGLYPH);
+            saveFileOptions();
+            [[gnu::musttail]] return options(OPTIONS_3D);
+        case OPTIONS_SLIDER:
+            tVBOpt.SLIDERMODE = !tVBOpt.SLIDERMODE;
+            saveFileOptions();
+            [[gnu::musttail]] return options(OPTIONS_SLIDER);
     }
 }
 
@@ -2719,83 +2668,73 @@ static bool areyousure(C2D_Text *message) {
     return button == AREYOUSURE_YES;
 }
 
-static void savestate_error(char *message, int last_button, int selected_state) {
-    C2D_Text text;
-    C2D_TextBufClear(dynamic_textbuf);
-    C2D_TextParse(&text, dynamic_textbuf, message);
-    C2D_TextOptimize(&text);
-    LOOP_BEGIN(about_buttons, 0);
-        C2D_DrawText(&text, C2D_AlignCenter | C2D_WithColor, 320 / 2, 80, 0, 0.7, 0.7, TINT_COLOR);
-    LOOP_END(about_buttons);
-    [[gnu::musttail]] return savestate_menu(last_button, selected_state);
-}
-
-static void savestate_confirm(char *message, int last_button, int selected_state) {
-    C2D_Text text;
-    C2D_TextBufClear(dynamic_textbuf);
-    C2D_TextParse(&text, dynamic_textbuf, message);
-    C2D_TextOptimize(&text);
-    LOOP_BEGIN(savestate_confirm_buttons, 0);
-        C2D_DrawText(&text, C2D_AlignCenter | C2D_WithColor, 320 / 2, 80, 0, 0.7, 0.7, TINT_COLOR);
-    LOOP_END(savestate_confirm_buttons);
-    if (button) [[gnu::musttail]] return savestate_menu(last_button, selected_state);
-    else return;
-}
-
 static void savestate_menu(int initial_button, int selected_state) {
-    char dynamic_text[32];
-    sprintf(dynamic_text, "存档 %d", selected_state);
+    static char status[64];
+    savestate_buttons[LOAD_SAVESTATE].hidden = !emulation_hasstate(selected_state);
+    MenuTheme theme = menu_theme();
+    for (int i = SAVE_SAVESTATE; i <= LOAD_SAVESTATE; i++) {
+        savestate_buttons[i].text_colour = theme.nav_text;
+        savestate_buttons[i].selected_colour = theme.nav_selected_bg;
+        savestate_buttons[i].selected_text_colour = theme.nav_selected_text;
+    }
 
-    C2D_Text selected_state_text;
-    C2D_TextBufClear(dynamic_textbuf);
-    C2D_TextParse(&selected_state_text, dynamic_textbuf, dynamic_text);
-    C2D_TextOptimize(&selected_state_text);
-
-    savestate_buttons[LOAD_SAVESTATE].hidden = savestate_buttons[DELETE_SAVESTATE].hidden = !emulation_hasstate(selected_state);
-
-    LOOP_BEGIN(savestate_buttons, initial_button);
+    LOOP_BEGIN(savestate_buttons, initial_button == SAVESTATE_BACK ? SAVE_SAVESTATE : initial_button);
         int keys_down = hidKeysDown();
-        int state_shift = !!(keys_down & KEY_R) - !!(keys_down & KEY_L);
-        if (state_shift != 0) {
-            selected_state = (selected_state + 10 + state_shift) % 10;
-            sprintf(dynamic_text, "存档 %d", selected_state);
-            C2D_Text selected_state_text;
+        if (keys_down & KEY_UP) selected_state = selected_state == 0 ? 9 : selected_state - 1;
+        if (keys_down & KEY_DOWN) selected_state = selected_state == 9 ? 0 : selected_state + 1;
+        savestate_buttons[LOAD_SAVESTATE].hidden = !emulation_hasstate(selected_state);
+        C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+        C2D_DrawText(&text_savestate_menu, C2D_AlignCenter | C2D_WithColor,
+            216, 16, 0, 0.7, 0.7, theme.nav_selected_text);
+        for (int slot = 0; slot < 10; slot++) {
+            char row[32];
+            time_t mtime;
+            if (emulation_state_mtime(slot, &mtime)) {
+                struct tm *local = localtime(&mtime);
+                char time_text[24];
+                if (local) strftime(time_text, sizeof(time_text), "%m-%d %H:%M", local);
+                else strcpy(time_text, "--");
+                snprintf(row, sizeof(row), "%02d  %s", slot + 1, time_text);
+            } else {
+                snprintf(row, sizeof(row), "%02d  --", slot + 1);
+            }
+            C2D_Text row_text;
             C2D_TextBufClear(dynamic_textbuf);
-            C2D_TextParse(&selected_state_text, dynamic_textbuf, dynamic_text);
-            C2D_TextOptimize(&selected_state_text);
-            savestate_buttons[LOAD_SAVESTATE].hidden = savestate_buttons[DELETE_SAVESTATE].hidden = !emulation_hasstate(selected_state);
+            C2D_TextParse(&row_text, dynamic_textbuf, row);
+            C2D_TextOptimize(&row_text);
+            if (slot == selected_state)
+                C2D_DrawRectSolid(128, 36 + slot * 15, 0, 176, 15, theme.row_selected_bg);
+            C2D_DrawText(&row_text, C2D_AlignLeft | C2D_WithColor,
+                136, 38 + slot * 15, 0, 0.45, 0.45,
+                slot == selected_state ? theme.row_selected_text : theme.nav_text);
         }
-        C2D_DrawText(&text_savestate_menu, C2D_AlignCenter | C2D_WithColor, 320 / 2, 10, 0, 0.7, 0.7, TINT_COLOR);
-        C2D_DrawText(&selected_state_text, C2D_AlignCenter | C2D_WithColor, 320 / 2, 240 / 3, 0, 0.7, 0.7, TINT_COLOR);
+        if (status[0]) {
+            C2D_Text status_text;
+            C2D_TextBufClear(dynamic_textbuf);
+            C2D_TextParse(&status_text, dynamic_textbuf, status);
+            C2D_TextOptimize(&status_text);
+            C2D_DrawText(&status_text, C2D_AlignLeft | C2D_WithColor,
+                128, 182, 0, 0.4, 0.4, theme.nav_selected_text);
+        }
     LOOP_END(savestate_buttons);
 
     last_savestate = selected_state;
-
-    switch(button) {
+    switch (button) {
         case SAVESTATE_BACK:
             [[gnu::musttail]] return main_menu(MAIN_MENU_SAVESTATES);
         case SAVE_SAVESTATE:
-            if (emulation_sstate(selected_state) != 0) {
-                [[gnu::musttail]] return savestate_error("保存存档失败", SAVE_SAVESTATE, selected_state);
-            } else {
-                [[gnu::musttail]] return savestate_confirm("存档已保存！", SAVE_SAVESTATE, selected_state);
-            }
+            if (emulation_sstate(selected_state) != 0)
+                snprintf(status, sizeof(status), "保存失败");
+            else
+                snprintf(status, sizeof(status), "已保存到 %02d", selected_state + 1);
+            [[gnu::musttail]] return savestate_menu(SAVE_SAVESTATE, selected_state);
         case LOAD_SAVESTATE:
             if (emulation_lstate(selected_state) != 0) {
-                [[gnu::musttail]] return savestate_error("加载存档失败", LOAD_SAVESTATE, selected_state);
-            } else {
-                [[gnu::musttail]] return savestate_confirm("存档已加载！", LOAD_SAVESTATE, selected_state);
+                snprintf(status, sizeof(status), "加载失败");
+                [[gnu::musttail]] return savestate_menu(LOAD_SAVESTATE, selected_state);
             }
-        case DELETE_SAVESTATE:
-            if (emulation_rmstate(selected_state) != 0) {
-                [[gnu::musttail]] return savestate_error("删除存档失败", DELETE_SAVESTATE, selected_state);
-            } else {
-                [[gnu::musttail]] return savestate_menu(SAVE_SAVESTATE, selected_state);
-            }
-        case PREV_SAVESTATE:
-            [[gnu::musttail]] return savestate_menu(PREV_SAVESTATE, selected_state == 0 ? 9 : selected_state - 1);
-        case NEXT_SAVESTATE:
-            [[gnu::musttail]] return savestate_menu(NEXT_SAVESTATE, selected_state == 9 ? 0 : selected_state + 1);
+            guiop = 0;
+            return;
     }
 }
 
@@ -2807,7 +2746,7 @@ static void about(void) {
         C2D_DrawSpriteTinted(&logo_sprite, &tint);
         C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor, 320 / 2, 80, 0, 0.5, 0.5, TINT_COLOR);
     LOOP_END(about_buttons);
-    [[gnu::musttail]] return options(OPTIONS_ABOUT);
+    return;
 }
 
 static bool load_error(int err, bool unloaded, char *rom_message) {
@@ -2944,7 +2883,7 @@ static inline int handle_buttons(Button buttons[], int count) {
                     continue;
 
                 // skip if hidden
-                if (buttons[i].hidden)
+                if (buttons[i].hidden || buttons[i].disabled)
                     continue;
 
                 // skip if button is not in the right direction
@@ -2981,8 +2920,16 @@ static inline int handle_buttons(Button buttons[], int count) {
     }
 
     // check buttons for input
+    if (kDown & KEY_B) {
+        for (int i = 0; i < count; i++) {
+            if (buttons[i].back_action || buttons[i].no_action) {
+                ret = i;
+                break;
+            }
+        }
+    }
     for (int i = 0; i < count; i++) {
-        if (buttons[i].hidden) continue;
+        if (buttons[i].hidden || buttons[i].disabled) continue;
         if (
             touch_pos.px >= buttons[i].x && touch_pos.py >= buttons[i].y &&
             touch_pos.px < buttons[i].x + buttons[i].w && touch_pos.py < buttons[i].y + buttons[i].h
@@ -2999,12 +2946,12 @@ static inline int handle_buttons(Button buttons[], int count) {
             }
         }
 
-        if ((hidKeysUp() & KEY_TOUCH) && pressed == i) {
+        if ((hidKeysUp() & KEY_TOUCH) && pressed == i && !buttons[i].back_action && !buttons[i].no_action) {
             ret = i;
         }
 
         // select with the A button
-        if ((kDown & KEY_A) && selectedButton == &buttons[i] && !buttonLock) {
+        if ((kDown & KEY_A) && selectedButton == &buttons[i] && !buttonLock && !buttons[i].back_action && !buttons[i].no_action) {
             ret = i;
         }
 
@@ -3025,10 +2972,22 @@ static inline int handle_buttons(Button buttons[], int count) {
         if (base_colour == 0) base_colour = tVBOpt.TINT;
         u32 normal_colour = COLOR_BRIGHTNESS(base_colour, 1.0);
         u32 pressed_colour = COLOR_BRIGHTNESS(base_colour, 0.5);
-        C2D_DrawRectSolid(buttons[i].x, buttons[i].y, 0, buttons[i].w, buttons[i].h,
-            pressed == i ? pressed_colour : normal_colour);
-        if (selectedButton == &buttons[i]) {
-            if (buttons[i].draw_selected_rect) {
+        if (buttons[i].themed) {
+            MenuTheme theme = menu_theme();
+            normal_colour = buttons[i].transparent ? 0 : theme.panel_bg;
+            pressed_colour = theme.row_selected_bg;
+        }
+        bool has_visual = buttons[i].str || buttons[i].custom_draw || buttons[i].show_toggle || buttons[i].show_option;
+        if (has_visual && !buttons[i].back_action && !buttons[i].no_action &&
+            (!buttons[i].transparent || (selectedButton == &buttons[i]))) {
+            C2D_DrawRectSolid(buttons[i].x, buttons[i].y, 0, buttons[i].w, buttons[i].h,
+                selectedButton == &buttons[i] ? pressed_colour : (pressed == i ? pressed_colour : normal_colour));
+        }
+        if (has_visual && selectedButton == &buttons[i] && !buttons[i].back_action && !buttons[i].no_action) {
+            if (buttons[i].themed) {
+                C2D_DrawRectSolid(buttons[i].x, buttons[i].y, 0, buttons[i].w, buttons[i].h,
+                    buttons[i].selected_colour ? buttons[i].selected_colour : pressed_colour);
+            } else if (buttons[i].draw_selected_rect) {
                 C2D_DrawLine(buttons[i].x + 2, buttons[i].y + 2.5, BLACK, buttons[i].x + buttons[i].w - 2, buttons[i].y + 2.5, BLACK, 1, 0);
                 C2D_DrawLine(buttons[i].x + buttons[i].w - 2.5, buttons[i].y + 2, BLACK, buttons[i].x + buttons[i].w - 2.5, buttons[i].y + buttons[i].h - 2, BLACK, 1, 0);
                 C2D_DrawLine(buttons[i].x + buttons[i].w - 2, buttons[i].y + buttons[i].h - 2.5, BLACK, buttons[i].x + 2, buttons[i].y + buttons[i].h - 2.5, BLACK, 1, 0);
@@ -3039,17 +2998,27 @@ static inline int handle_buttons(Button buttons[], int count) {
         }
         if (buttons[i].custom_draw) {
             buttons[i].custom_draw(&buttons[i]);
-        } else if (buttons[i].str) {
+        } else if (buttons[i].str && !buttons[i].back_action && !buttons[i].no_action) {
             int yoff = -10;
             char *strptr = buttons[i].str;
             while ((strptr = strchr(strptr, '\n'))) {
                 yoff -= 10;
                 strptr++;
             }
-            C2D_DrawText(&buttons[i].text, C2D_AlignCenter, buttons[i].x + buttons[i].w / 2, buttons[i].y + buttons[i].h / 2 + yoff, 0, 0.7, 0.7);
+            u32 text_colour = buttons[i].themed ?
+                (selectedButton == &buttons[i] ? buttons[i].selected_text_colour : buttons[i].text_colour) : 0;
+            C2D_DrawText(&buttons[i].text,
+                text_colour ? C2D_AlignCenter | C2D_WithColor : C2D_AlignCenter,
+                buttons[i].x + buttons[i].w / 2, buttons[i].y + buttons[i].h / 2 + yoff, 0, 0.7, 0.7,
+                text_colour);
         }
-        if (buttons[i].show_toggle) C2D_DrawText(buttons[i].toggle ? buttons[i].toggle_text_on : buttons[i].toggle_text_off, C2D_AlignLeft, buttons[i].x, buttons[i].y, 0, 0.5, 0.5);
-        if (buttons[i].show_option) C2D_DrawText(buttons[i].option_texts[buttons[i].option], C2D_AlignLeft, buttons[i].x, buttons[i].y, 0, 0.5, 0.5);
+        u32 auxiliary_colour = buttons[i].themed ?
+            (selectedButton == &buttons[i] ? buttons[i].selected_text_colour : buttons[i].text_colour) : 0;
+        u32 auxiliary_flags = C2D_AlignLeft | (auxiliary_colour ? C2D_WithColor : 0);
+        if (buttons[i].show_toggle) C2D_DrawText(buttons[i].toggle ? buttons[i].toggle_text_on : buttons[i].toggle_text_off,
+            auxiliary_flags, buttons[i].x, buttons[i].y, 0, 0.5, 0.5, auxiliary_colour);
+        if (buttons[i].show_option) C2D_DrawText(buttons[i].option_texts[buttons[i].option],
+            auxiliary_flags, buttons[i].x + 88, buttons[i].y, 0, 0.5, 0.5, auxiliary_colour);
     }
     if (save_thread) C2D_DrawText(&text_saving, C2D_AlignLeft, 0, 224, 0, 0.5, 0.5);
     if (ret >= 0) pressed = -1;
@@ -3161,7 +3130,7 @@ void guiInit(void) {
     STATIC_TEXT(&text_sound_error, "音频初始化失败。\n请确认 DSP 固件已导出。")
     STATIC_TEXT(&text_debug_filenames, "请在问题报告中附上 debug_info.txt 和\ndebug_replay.bin.gz。")
     STATIC_TEXT(&text_anykeyexit, "按任意键退出")
-    STATIC_TEXT(&text_about, VERSION "\n作者：Floogle、danielps 等\n启动画面：Morintari\n自定义控制方案：nevumx\n基于 David Tucker 的 Reality Boy\n更多信息：github.com/skyfloogle/red-viper")
+    STATIC_TEXT(&text_about, VERSION "\n作者：Floogle、danielps 等\n启动画面：Morintari\n自定义控制方案：nevumx\n基于 David Tucker 的 Reality Boy\n更多信息：github.com/skyfloogle/red-viper\n配色模式与 UI 改版：ddd")
     STATIC_TEXT(&text_loading, "加载中...")
     STATIC_TEXT(&text_loaderr, "ROM 加载失败。")
     STATIC_TEXT(&text_unloaded, "当前 ROM 已卸载。")

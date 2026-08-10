@@ -439,29 +439,6 @@ static int handler(void* user, const char* section, const char* name,
     return 1;
 }
 
-static char *getGameIniPath(void) {
-    struct stat st;
-    char *last_slash = strrchr(tVBOpt.ROM_PATH, '/');
-    if (last_slash == NULL) return NULL;
-    static char inipath[300];
-    // $HOME/configs
-    snprintf(inipath, sizeof(inipath), "%s/configs", tVBOpt.HOME_PATH);
-    if (stat(tVBOpt.HOME_PATH, &st) == -1) {
-        if (mkdir(tVBOpt.HOME_PATH, 0777)) return NULL;
-    }
-    if (stat(inipath, &st) == -1) {
-        if (mkdir(inipath, 0777)) return NULL;
-    }
-    // $HOME/configs/game.ini
-    strncat(inipath, last_slash, sizeof(inipath) - strlen(inipath) - 1);
-    char *end = strrchr(inipath, '.');
-    if (!end) end = inipath + strlen(inipath);
-    // vague bounds check
-    if (end - inipath >= 290) return NULL;
-    strcpy(end, ".ini");
-    return inipath;
-}
-
 int loadFileOptions(void) {
     struct stat st;
     if (stat(CONFIG_FILENAME, &st) == -1 && stat(CONFIG_FILENAME_LEGACY, &st) != -1) {
@@ -492,27 +469,8 @@ int loadFileOptions(void) {
 }
 
 int loadGameOptions(void) {
-    bool old_cpp = tVBOpt.CPP_ENABLED;
-
-    char *ini_path = getGameIniPath();
-    int ret = ENOENT;
-    if (ini_path) ret = ini_parse(ini_path, handler, &tVBOpt);
-    tVBOpt.MULTICOL = true;
-    tVBOpt.MULTIID = colour_mode_normalize(tVBOpt.MULTIID);
-    if (!ret) tVBOpt.GAME_SETTINGS = true;
-    else tVBOpt.GAME_SETTINGS = false;
-    tVBOpt.MODIFIED = false;
-    buttons_on_screen = tVBOpt.TOUCH_BUTTONS;
-    tVBOpt.CUSTOM_CONTROLS ? setCustomControls() : setPresetControls(buttons_on_screen);
-    #ifdef __3DS__
-    osSetSpeedupEnable(tVBOpt.N3DS_SPEEDUP);
-    if (tVBOpt.CPP_ENABLED != old_cpp) {
-        if (tVBOpt.CPP_ENABLED) cppInit();
-        else cppExit();
-    }
-    #endif
-
-    return ret;
+    /* Game-specific INI files are intentionally ignored. Settings are global. */
+    return loadFileOptions();
 }
 
 void writeOptionsFile(FILE* f, bool global) {
@@ -621,22 +579,9 @@ int saveFileOptions(void) {
 }
 
 int deleteGameOptions(void) {
-    char *ini_path = getGameIniPath();
-    if (ini_path) return remove(getGameIniPath());
-    else return ENOENT;
+    return ENOENT;
 }
 
 int saveGameOptions(void) {
-    char *ini_path = getGameIniPath();
-    if (!ini_path) return 1;
-    FILE* f = fopen(ini_path, "w");
-    if (!f)
-        return 1;
-
-    writeOptionsFile(f, false);
-
-    fclose(f);
-    tVBOpt.GAME_SETTINGS = true;
-    tVBOpt.MODIFIED = false;
-    return 0;
+    return saveFileOptions();
 }

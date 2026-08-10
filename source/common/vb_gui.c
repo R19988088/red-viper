@@ -122,9 +122,14 @@ char * get_savestate_path(int state, bool write) {
 }
 
 bool emulation_hasstate(int state) {
+    return emulation_state_mtime(state, NULL);
+}
+
+bool emulation_state_mtime(int state, time_t *mtime) {
     char *sspath = get_savestate_path(state, false);
     if (sspath == NULL) return false;
     bool result = stat(sspath, &st) != -1;
+    if (result && mtime != NULL) *mtime = st.st_mtime;
     free(sspath);
     return result;
 }

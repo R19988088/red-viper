@@ -1,6 +1,7 @@
 #ifndef VB_GUI_H
 #define VB_GUI_H
 
+#include <time.h>
 
 #define AKILL           0x01
 #define GUISTATUS       0x02
@@ -29,6 +30,7 @@ int options_saveoptions(void);
 int emulation_resume(void);
 int emulation_reset(void);
 bool emulation_hasstate(int state);
+bool emulation_state_mtime(int state, time_t *mtime);
 int emulation_rmstate(int state);
 int emulation_sstate(int state);
 int emulation_lstate(int state);
