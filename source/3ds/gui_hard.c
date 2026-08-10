@@ -158,15 +158,19 @@ typedef struct {
 
 static MenuTheme menu_theme(void) {
     int mode = colour_mode_normalize(tVBOpt.MULTIID);
+    unsigned shade0 = colour_mode_value(mode, 0);
+    unsigned shade1 = colour_mode_value(mode, 1);
+    unsigned shade2 = colour_mode_value(mode, 2);
+    unsigned shade3 = colour_mode_value(mode, 3);
     return (MenuTheme) {
-        .nav_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 2)), COLOR_G(colour_mode_value(mode, 2)), COLOR_B(colour_mode_value(mode, 2)), 255),
-        .nav_selected_bg = COLOR_BRIGHTNESS(colour_mode_value(mode, 1), 0.70f),
-        .nav_selected_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 3)), COLOR_G(colour_mode_value(mode, 3)), COLOR_B(colour_mode_value(mode, 3)), 255),
-        .disabled_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 1)), COLOR_G(colour_mode_value(mode, 1)), COLOR_B(colour_mode_value(mode, 1)), 255),
-        .option_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 3)), COLOR_G(colour_mode_value(mode, 3)), COLOR_B(colour_mode_value(mode, 3)), 255),
-        .panel_bg = COLOR_BRIGHTNESS(colour_mode_value(mode, 1), 0.45f),
-        .row_selected_bg = COLOR_BRIGHTNESS(colour_mode_value(mode, 2), 0.55f),
-        .row_selected_text = C2D_Color32(COLOR_R(colour_mode_value(mode, 3)), COLOR_G(colour_mode_value(mode, 3)), COLOR_B(colour_mode_value(mode, 3)), 255),
+        .nav_text = C2D_Color32(COLOR_R(shade2), COLOR_G(shade2), COLOR_B(shade2), 255),
+        .nav_selected_bg = C2D_Color32(COLOR_R(shade1), COLOR_G(shade1), COLOR_B(shade1), 255),
+        .nav_selected_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
+        .disabled_text = C2D_Color32(COLOR_R(shade1), COLOR_G(shade1), COLOR_B(shade1), 255),
+        .option_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
+        .panel_bg = C2D_Color32(COLOR_R(shade0), COLOR_G(shade0), COLOR_B(shade0), 255),
+        .row_selected_bg = C2D_Color32(COLOR_R(shade2), COLOR_G(shade2), COLOR_B(shade2), 255),
+        .row_selected_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
     };
 }
 
@@ -197,8 +201,6 @@ struct Button_t {
 
 static Button* selectedButton = NULL;
 static bool buttonLock = false;
-static bool show_initial_content = false;
-static int main_menu_navigation_request = -1;
 
 static inline int handle_buttons(Button buttons[], int count);
 #define HANDLE_BUTTONS(buttons) handle_buttons((buttons), sizeof((buttons)) / sizeof((buttons)[0]))
@@ -265,31 +267,6 @@ static Button main_menu_buttons[] = {
     #define MAIN_MENU_QUIT 7
     {.str="退出", .x=8, .y=204, .w=104, .h=28, .transparent=true, .themed=true},
 };
-
-static int main_menu_selected_index(void) {
-    for (int i = 0; i < LENGTH(main_menu_buttons); i++)
-        if (selectedButton == &main_menu_buttons[i]) return i;
-    return -1;
-}
-
-static bool main_menu_content_item(int item) {
-    return item == MAIN_MENU_SAVESTATES || item == MAIN_MENU_LOAD_ROM ||
-        item == MAIN_MENU_MULTI || item == MAIN_MENU_OPTIONS || item == MAIN_MENU_ABOUT;
-}
-
-static int main_menu_touch_target(void) {
-    if (!(hidKeysDown() & KEY_TOUCH)) return -1;
-    touchPosition touch_pos;
-    hidTouchRead(&touch_pos);
-    if (touch_pos.px >= 120) return -1;
-    for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
-        Button *button = &main_menu_buttons[i];
-        if (button->hidden || button->disabled) continue;
-        if (touch_pos.py >= button->y && touch_pos.py < button->y + button->h)
-            return i;
-    }
-    return -1;
-}
 
 static void multiplayer_menu(int initial_button);
 static Button multiplayer_menu_buttons[] = {
@@ -531,13 +508,13 @@ static Button touchscreen_settings_buttons[] = {
 static void options(int initial_button);
 static Button options_buttons[] = {
     #define OPTIONS_COLOUR 0
-    {.str="色彩模式", .x=120, .y=32, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_colour_mode_1, &text_colour_mode_2, &text_colour_mode_3}, .transparent=true, .themed=true},
+    {.str="色彩模式", .x=128, .y=24, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_colour_mode_1, &text_colour_mode_2, &text_colour_mode_3}, .transparent=true, .themed=true},
     #define OPTIONS_3D 1
-    {.str="3D 模式", .x=120, .y=88, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_anaglyph}, .transparent=true, .themed=true, .disabled=true},
+    {.str="3D 模式", .x=128, .y=72, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_anaglyph}, .transparent=true, .themed=true, .disabled=true},
     #define OPTIONS_SLIDER 2
-    {.str="滑块模式", .x=120, .y=144, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_vbipd}, .transparent=true, .themed=true},
+    {.str="滑块模式", .x=128, .y=120, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_vbipd}, .transparent=true, .themed=true},
     #define OPTIONS_LANGUAGE 3
-    {.str="语言", .x=120, .y=192, .w=184, .h=32, .show_option=true, .option_texts=(C2D_Text*[]){&text_language_chinese, &text_language_japanese, &text_language_english}, .transparent=true, .themed=true},
+    {.str="语言", .x=128, .y=168, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_language_chinese, &text_language_japanese, &text_language_english}, .transparent=true, .themed=true},
     #define OPTIONS_BACK 4
     {.hidden=true, .back_action=true},
 };
@@ -831,52 +808,27 @@ static void first_menu(int initial_button) {
     }
 
 no_forwarder:
-    for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++)
-        main_menu_buttons[i].hidden = true;
+    for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++) {
+        main_menu_buttons[i].hidden = false;
+        main_menu_buttons[i].disabled = true;
+    }
     main_menu_buttons[MAIN_MENU_QUIT].hidden = true;
     main_menu_buttons[MAIN_MENU_MULTI].disabled = true;
+    main_menu_buttons[MAIN_MENU_ABOUT].disabled = false;
+    main_menu_buttons[MAIN_MENU_LOAD_ROM].disabled = false;
     style_main_menu();
     int menu_initial = initial_button < MAIN_MENU_LOAD_ROM ? MAIN_MENU_LOAD_ROM : initial_button;
-    if (show_initial_content && main_menu_content_item(menu_initial)) {
-        show_initial_content = false;
-        switch (menu_initial) {
-            case MAIN_MENU_LOAD_ROM:
-                if (rom_loader(NULL)) return;
-                [[gnu::musttail]] return first_menu(MAIN_MENU_LOAD_ROM);
-            case MAIN_MENU_OPTIONS:
-                options(0);
-                [[gnu::musttail]] return first_menu(MAIN_MENU_OPTIONS);
-            case MAIN_MENU_ABOUT:
-                about();
-                [[gnu::musttail]] return first_menu(MAIN_MENU_ABOUT);
-            default:
-                break;
-        }
-    }
-    show_initial_content = false;
-    int previous_selection = menu_initial;
     LOOP_BEGIN(main_menu_buttons, menu_initial);
         draw_logo();
         draw_main_menu_panel();
         if (hidKeysDown() & KEY_Y) loop = false;
-        int current_selection = main_menu_selected_index();
-        if (current_selection != previous_selection && main_menu_content_item(current_selection)) {
-            button = current_selection;
-            loop = false;
-        }
-        previous_selection = current_selection;
     LOOP_END(main_menu_buttons);
     if (hidKeysDown() & KEY_Y) [[gnu::musttail]] return vblink();
     guiop = 0;
     switch (button) {
         case MAIN_MENU_LOAD_ROM:
             if (rom_loader(NULL)) return;
-            else {
-                int target = main_menu_navigation_request >= 0 ? main_menu_navigation_request : MAIN_MENU_LOAD_ROM;
-                main_menu_navigation_request = -1;
-                show_initial_content = target != MAIN_MENU_LOAD_ROM;
-                [[gnu::musttail]] return main_menu(target);
-            }
+            else [[gnu::musttail]] return first_menu(MAIN_MENU_LOAD_ROM);
         case MAIN_MENU_MULTI:
             [[gnu::musttail]] return multiplayer_main(0, true);
         case MAIN_MENU_OPTIONS:
@@ -894,45 +846,20 @@ no_forwarder:
 }
 
 static void game_menu(int initial_button) {
-    for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++)
+    for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++) {
         main_menu_buttons[i].hidden = false;
+        main_menu_buttons[i].disabled = false;
+    }
     main_menu_buttons[MAIN_MENU_LOAD_ROM].hidden = false;
+    main_menu_buttons[MAIN_MENU_LOAD_ROM].disabled = false;
+    main_menu_buttons[MAIN_MENU_ABOUT].disabled = false;
     main_menu_buttons[MAIN_MENU_QUIT].hidden = true;
     main_menu_buttons[MAIN_MENU_MULTI].disabled = false;
     style_main_menu();
-    bool open_content = show_initial_content;
-    show_initial_content = false;
-    if (open_content && main_menu_content_item(initial_button)) {
-        show_initial_content = false;
-        switch (initial_button) {
-            case MAIN_MENU_LOAD_ROM:
-                if (rom_loader(NULL)) return;
-                [[gnu::musttail]] return game_menu(MAIN_MENU_LOAD_ROM);
-            case MAIN_MENU_SAVESTATES:
-                [[gnu::musttail]] return savestate_menu(0, last_savestate);
-            case MAIN_MENU_OPTIONS:
-                options(0);
-                [[gnu::musttail]] return game_menu(MAIN_MENU_OPTIONS);
-            case MAIN_MENU_ABOUT:
-                about();
-                [[gnu::musttail]] return game_menu(MAIN_MENU_ABOUT);
-            case MAIN_MENU_MULTI:
-                [[gnu::musttail]] return multiplayer_main(0, true);
-            default:
-                break;
-        }
-    }
-    int previous_selection = initial_button;
     LOOP_BEGIN(main_menu_buttons, initial_button);
         draw_main_menu_panel();
         if (hidKeysDown() & KEY_B) loop = false;
         if (hidKeysDown() & KEY_Y) loop = false;
-        int current_selection = main_menu_selected_index();
-        if (current_selection != previous_selection && main_menu_content_item(current_selection)) {
-            button = current_selection;
-            loop = false;
-        }
-        previous_selection = current_selection;
     LOOP_END(main_menu_buttons);
     if (hidKeysDown() & KEY_B) {
         guiop = 0;
@@ -947,10 +874,7 @@ static void game_menu(int initial_button) {
                     return;
                 }
                 guiop = 0;
-                int target = main_menu_navigation_request >= 0 ? main_menu_navigation_request : MAIN_MENU_LOAD_ROM;
-                main_menu_navigation_request = -1;
-                show_initial_content = target != MAIN_MENU_LOAD_ROM;
-                [[gnu::musttail]] return main_menu(target);
+                [[gnu::musttail]] return game_menu(MAIN_MENU_LOAD_ROM);
             }
         case MAIN_MENU_MULTI:
             [[gnu::musttail]] return multiplayer_main(0, true);
@@ -1273,11 +1197,6 @@ static bool rom_loader_impl(char *message, bool refresh) {
     MenuTheme menu_colours = menu_theme();
     LOOP_BEGIN(rom_loader_buttons, -1);
         draw_main_menu_shell(MAIN_MENU_LOAD_ROM);
-        int navigation_target = main_menu_touch_target();
-        if (navigation_target >= 0) {
-            main_menu_navigation_request = navigation_target;
-            loop = false;
-        }
         // process rom list
         touchPosition touch_pos;
         hidTouchRead(&touch_pos);
@@ -1477,9 +1396,6 @@ static bool rom_loader_impl(char *message, bool refresh) {
 
     old_dir[0] = 0;
 
-    if (main_menu_navigation_request >= 0)
-        return false;
-
     if (clicked_entry < 0) {
         switch (button) {
             case ROM_LOADER_UP: // Up
@@ -1544,11 +1460,6 @@ static void multiplayer_main(int initial_button, bool init_uds) {
     LOOP_BEGIN(multiplayer_main_buttons, initial_button);
         style_main_menu();
         draw_main_menu_shell(MAIN_MENU_MULTI);
-        int navigation_target = main_menu_touch_target();
-        if (navigation_target >= 0) {
-            main_menu_navigation_request = navigation_target;
-            loop = false;
-        }
         for (int i = MULTI_MAIN_HOST; i <= MULTI_MAIN_JOIN; i++) {
             multiplayer_main_buttons[i].themed = true;
             multiplayer_main_buttons[i].transparent = true;
@@ -1558,12 +1469,6 @@ static void multiplayer_main(int initial_button, bool init_uds) {
         }
         C2D_DrawText(&text_multi_reset_on_join, C2D_AlignCenter | C2D_WithColor, 216, 156, 0, 0.45, 0.45, TINT_COLOR);
     LOOP_END(multiplayer_main_buttons);
-    if (main_menu_navigation_request >= 0) {
-        int target = main_menu_navigation_request;
-        main_menu_navigation_request = -1;
-        show_initial_content = true;
-        [[gnu::musttail]] return main_menu(target);
-    }
     switch (button) {
         case MULTI_MAIN_HOST:
             if (game_running || rom_loader("请选择要创建主机的游戏。")) {
@@ -2727,19 +2632,8 @@ static void options(int initial_button) {
     }
     LOOP_BEGIN(options_buttons, initial_button);
         draw_main_menu_shell(MAIN_MENU_OPTIONS);
-        int navigation_target = main_menu_touch_target();
-        if (navigation_target >= 0) {
-            main_menu_navigation_request = navigation_target;
-            loop = false;
-        }
         if (hidKeysDown() & KEY_B) loop = false;
     LOOP_END(options_buttons);
-    if (main_menu_navigation_request >= 0) {
-        int target = main_menu_navigation_request;
-        main_menu_navigation_request = -1;
-        show_initial_content = true;
-        [[gnu::musttail]] return main_menu(target);
-    }
     switch (button) {
         case OPTIONS_COLOUR:
             tVBOpt.MULTIID = (tVBOpt.MULTIID + 1) % COLOUR_MODE_COUNT;
@@ -2922,11 +2816,6 @@ static void savestate_menu(int initial_button, int selected_state) {
 
     LOOP_BEGIN(savestate_buttons, initial_button == SAVESTATE_BACK ? SAVE_SAVESTATE : initial_button);
         draw_main_menu_shell(MAIN_MENU_SAVESTATES);
-        int navigation_target = main_menu_touch_target();
-        if (navigation_target >= 0) {
-            main_menu_navigation_request = navigation_target;
-            loop = false;
-        }
         int keys_down = hidKeysDown();
         if (keys_down & KEY_UP) selected_state = selected_state == 0 ? 9 : selected_state - 1;
         if (keys_down & KEY_DOWN) selected_state = selected_state == 9 ? 0 : selected_state + 1;
@@ -2966,13 +2855,6 @@ static void savestate_menu(int initial_button, int selected_state) {
         }
     LOOP_END(savestate_buttons);
 
-    if (main_menu_navigation_request >= 0) {
-        int target = main_menu_navigation_request;
-        main_menu_navigation_request = -1;
-        show_initial_content = true;
-        [[gnu::musttail]] return main_menu(target);
-    }
-
     last_savestate = selected_state;
     switch (button) {
         case SAVESTATE_BACK:
@@ -3001,20 +2883,9 @@ static void about(void) {
     C2D_PlainImageTint(&tint, C2D_Color32(255, 0, 0, 255), 1);
     LOOP_BEGIN(about_buttons, 0);
         draw_main_menu_shell(MAIN_MENU_ABOUT);
-        int navigation_target = main_menu_touch_target();
-        if (navigation_target >= 0) {
-            main_menu_navigation_request = navigation_target;
-            loop = false;
-        }
         C2D_DrawSpriteTinted(&logo_sprite, &tint);
         C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor, 216, 62, 0, 0.35, 0.35, TINT_COLOR);
     LOOP_END(about_buttons);
-    if (main_menu_navigation_request >= 0) {
-        int target = main_menu_navigation_request;
-        main_menu_navigation_request = -1;
-        show_initial_content = true;
-        [[gnu::musttail]] return main_menu(target);
-    }
     return;
 }
 
@@ -3524,7 +3395,6 @@ void openMenu(bool my_menu) {
     C2D_Prepare();
     C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA);
     if (my_menu) {
-        show_initial_content = true;
         main_menu(game_running ? MAIN_MENU_RESUME : MAIN_MENU_LOAD_ROM);
     } else {
         multiplayer_wait_for_peer();
