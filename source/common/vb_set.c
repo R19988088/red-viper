@@ -9,6 +9,7 @@
 #endif
 
 #include "inih/ini.h"
+#include "colour_modes.h"
 #include "vb_set.h"
 #include "vb_dsp.h"
 #include "vb_gui.h"
@@ -115,7 +116,7 @@ void setDefaults(void) {
     tVBOpt.DPAD_MODE = 0;
     tVBOpt.CUSTOM_CONTROLS = 0;
     setCustomMappingDefaults();
-    tVBOpt.MULTICOL = false;
+    tVBOpt.MULTICOL = true;
     tVBOpt.TINT = 0x0000ff;
     tVBOpt.MULTIID = 0;
     tVBOpt.MTINT[0][0] = 0;
@@ -472,6 +473,8 @@ int loadFileOptions(void) {
     bool old_cpp = tVBOpt.CPP_ENABLED;
 
     int ret = ini_parse(CONFIG_FILENAME, handler, &tVBOpt);
+    tVBOpt.MULTICOL = true;
+    tVBOpt.MULTIID = colour_mode_normalize(tVBOpt.MULTIID);
     if (!ret) tVBOpt.GAME_SETTINGS = false;
     tVBOpt.MODIFIED = false;
     buttons_on_screen = tVBOpt.TOUCH_BUTTONS;
@@ -494,6 +497,8 @@ int loadGameOptions(void) {
     char *ini_path = getGameIniPath();
     int ret = ENOENT;
     if (ini_path) ret = ini_parse(ini_path, handler, &tVBOpt);
+    tVBOpt.MULTICOL = true;
+    tVBOpt.MULTIID = colour_mode_normalize(tVBOpt.MULTIID);
     if (!ret) tVBOpt.GAME_SETTINGS = true;
     else tVBOpt.GAME_SETTINGS = false;
     tVBOpt.MODIFIED = false;
@@ -512,7 +517,6 @@ int loadGameOptions(void) {
 
 void writeOptionsFile(FILE* f, bool global) {
     fprintf(f, "[vbopt]\n");
-    fprintf(f, "multicol=%d\n", tVBOpt.MULTICOL);
     fprintf(f, "tint=%d\n", tVBOpt.TINT);
     fprintf(f, "multicolid=%d\n", tVBOpt.MULTIID);
     fprintf(f, "slidermode=%d\n", tVBOpt.SLIDERMODE);
@@ -596,16 +600,6 @@ void writeOptionsFile(FILE* f, bool global) {
     fprintf(f, "buttons=%d\n", tVBOpt.TOUCH_BUTTONS);
     fprintf(f, "switch=%d\n", tVBOpt.TOUCH_SWITCH);
     fprintf(f, "inputs=%d\n", tVBOpt.INPUTS);
-    for (int i = 0; i < 4; i++) {
-        fprintf(f, "\n[palette%d]\n", i);
-    fprintf(f, "tint0=%d\n", tVBOpt.MTINT[i][0]);
-    fprintf(f, "tint1=%d\n", tVBOpt.MTINT[i][1]);
-    fprintf(f, "tint2=%d\n", tVBOpt.MTINT[i][2]);
-    fprintf(f, "tint3=%d\n", tVBOpt.MTINT[i][3]);
-    fprintf(f, "scale1=%f\n", tVBOpt.STINT[i][0]);
-    fprintf(f, "scale2=%f\n", tVBOpt.STINT[i][1]);
-    fprintf(f, "scale3=%f\n", tVBOpt.STINT[i][2]);
-    }
 }
 
 int saveFileOptions(void) {

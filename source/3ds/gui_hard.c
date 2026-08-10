@@ -29,6 +29,7 @@
 #include "rom_db.h"
 #include "patches.h"
 #include "video_hard.h"
+#include "colour_modes.h"
 
 #define COLOR_R(COLOR) ( ((COLOR) & 0x000000FF) )
 #define COLOR_G(COLOR) ( ((COLOR) & 0x0000FF00) >> 8)
@@ -109,7 +110,7 @@ static C2D_Text text_A, text_B, text_btn_A, text_btn_B, text_btn_X, text_btn_L, 
                 text_vb_lpad, text_vb_rpad, text_mirror_abxy, text_vblink, text_preset, text_custom,
                 text_error, text_3ds, text_vb, text_map, text_currently_mapped_to, text_normal, text_turbo,
                 text_current_default, text_anaglyph, text_depth, text_cpp_on, text_cpp_off,
-                text_monochrome, text_multicolor, text_brighten, text_brightness_disclaimer,
+                text_colour_mode_1, text_colour_mode_2, text_colour_mode_3,
                 text_multi_waiting, text_multi_init_error, text_multi_disconnect, text_multi_comm_error,
                 text_multi_reset_on_join, text_input_buffer, text_areyousure_leave,
                 text_version_mismatch, text_your_version, text_connect_anyway,
@@ -123,7 +124,7 @@ PERFORM_FOR_EACH_VB_BUTTON(CUSTOM_VB_BUTTON_TEXT)
 
 static C2D_SpriteSheet sprite_sheet;
 static C2D_SpriteSheet splash_sheet;
-static C2D_Sprite colour_wheel_sprite, logo_sprite, vb_icon_sprite;
+static C2D_Sprite logo_sprite, vb_icon_sprite;
 static C2D_Sprite text_3ds_sprite, text_vb_sprite, text_toggle_sprite, text_turbo_sprite;
 static C2D_Sprite splash_left, splash_right;
 
@@ -510,12 +511,10 @@ static Button video_settings_buttons[] = {
 static void barrier_settings(int initial_button);
 static Button barrier_settings_buttons[] = {
     #define BARRIER_MODE 0
-    {.str="色彩模式", .x=16, .y=16, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_multicolor, .toggle_text_off=&text_monochrome},
-    #define BARRIER_SETTINGS 1
-    {.str="色彩设置", .x=16, .y=80, .w=288, .h=48},
-    #define BARRIER_DEFAULT_EYE 2
-    {.str="默认视图", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_right, .toggle_text_off=&text_left},
-    #define BARRIER_BACK 3
+    {.str="色彩模式", .x=16, .y=16, .w=288, .h=48, .show_option=true, .option_texts=(C2D_Text*[]){&text_colour_mode_1, &text_colour_mode_2, &text_colour_mode_3}},
+    #define BARRIER_DEFAULT_EYE 1
+    {.str="默认视图", .x=16, .y=136, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_right, .toggle_text_off=&text_left},
+    #define BARRIER_BACK 2
     {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
@@ -560,55 +559,6 @@ static Button anaglyph_settings_buttons[] = {
 
     #define ANAGLYPH_DEPTH_PLACEHOLDER 17
     {.x=240, .y=16, .w=1, .h=1, .hidden=true},
-};
-
-static void colour_filter(void);
-static Button colour_filter_buttons[] = {
-    #define COLOUR_BACK 0
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
-    #define COLOUR_RED 1
-    {.str="红色", .x=16, .y=64, .w=48, .h=32},
-    #define COLOUR_GRAY 2
-    {.str="灰度", .x=16, .y=128, .w=48, .h=32},
-};
-
-static void draw_multislot(Button*);
-static void multicolour_picker(int initial_button);
-static Button multicolour_picker_buttons[] = {
-    {.x=16, .y=16, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="编辑", .x=224, .y=16, .w=80, .h=40},
-    {.x=16, .y=16+48, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="编辑", .x=224, .y=16+48, .w=80, .h=40},
-    {.x=16, .y=16+48*2, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="编辑", .x=224, .y=16+48*2, .w=80, .h=40},
-    {.x=16, .y=16+48*3, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="编辑", .x=224, .y=16+48*3, .w=80, .h=40},
-    #define MULTIPICKER_BACK 8
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
-};
-
-static void multicolour_settings(int palette_id, int initial_button);
-static Button multicolour_settings_buttons[] = {
-    #define MULTI_BLACK 0
-    {.str="最暗", .x=16, .y=16, .w=170, .h=40},
-    #define MULTI_BRTA
-    {.str="暗", .x=16, .y=16+48, .w=170, .h=40},
-    #define MULTI_BRTB
-    {.str="亮", .x=16, .y=16+48*2, .w=170, .h=40},
-    #define MULTI_BRTC
-    {.str="最亮", .x=16, .y=16+48*3, .w=170, .h=40},
-    #define MULTI_BACK 4
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
-};
-
-static void multicolour_wheel(int palette_id, int colour_id);
-static Button multicolour_wheel_buttons[] = {
-    #define MULTIWHEEL_BACK 0
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
-    #define MULTIWHEEL_HEX 1
-    {.str="", .x=100, .y=212, .w=100, .h=28},
-    #define MULTIWHEEL_SCALE 2
-    {.str="", .x=220, .y=212, .w=100, .h=28},
 };
 
 static void vblink(void);
@@ -696,10 +646,6 @@ static Button forwarder_error_buttons[] = {
     SETUP_BUTTONS(video_settings_buttons); \
     SETUP_BUTTONS(barrier_settings_buttons); \
     SETUP_BUTTONS(anaglyph_settings_buttons); \
-    SETUP_BUTTONS(colour_filter_buttons); \
-    SETUP_BUTTONS(multicolour_picker_buttons); \
-    SETUP_BUTTONS(multicolour_settings_buttons); \
-    SETUP_BUTTONS(multicolour_wheel_buttons); \
     SETUP_BUTTONS(dev_options_buttons); \
     SETUP_BUTTONS(sound_error_buttons); \
     SETUP_BUTTONS(touchscreen_settings_buttons); \
@@ -2202,19 +2148,6 @@ static void draw_shoulders(Button *self) {
     C2D_DrawText(tVBOpt.ZLZR_MODE <= 1 ? &text_btn_R : tVBOpt.ZLZR_MODE <= 2 ? &text_btn_A : &text_btn_B, C2D_AlignCenter, SHOULDX + OFFSET*2 + 0.5, SHOULDY + 5, 0, 1, 1);
 }
 
-static void draw_multislot(Button *self) {
-    int id = (self - multicolour_picker_buttons) / 2;
-    C2D_DrawRectSolid(self->x + 100 - 4 - 32 - 8 - 32, self->y + 8, 0, 32, 24, 0xff000000);
-    C2D_DrawRectSolid(self->x + 100 - 4 - 32 - 8 - 32 + 1, self->y + 8 + 1, 0, 30, 22, 0xff000000 | tVBOpt.MTINT[id][0]);
-    C2D_DrawRectSolid(self->x + 100 - 4 - 32, self->y + 8, 0, 32, 24, 0xff000000);
-    C2D_DrawRectSolid(self->x + 100 - 4 - 32 + 1, self->y + 8 + 1, 0, 30, 22, 0xff000000 | tVBOpt.MTINT[id][1]);
-    C2D_DrawRectSolid(self->x + 100 + 4, self->y + 8, 0, 32, 24, 0xff000000);
-    C2D_DrawRectSolid(self->x + 100 + 4 + 1, self->y + 8 + 1, 0, 30, 22, 0xff000000 | tVBOpt.MTINT[id][2]);
-    C2D_DrawRectSolid(self->x + 100 + 4 + 32 + 8, self->y + 8, 0, 32, 24, 0xff000000);
-    C2D_DrawRectSolid(self->x + 100 + 4 + 32 + 8 + 1, self->y + 8 + 1, 0, 30, 22, 0xff000000 | tVBOpt.MTINT[id][3]);
-    if (id == tVBOpt.MULTIID) C2D_DrawCircleSolid(self->x + 5, self->y + self->h / 2, 0, 4, 0xff000000);
-}
-
 static void preset_controls(int initial_button) {
     bool shoulder_pressed = false;
     bool face_pressed = false;
@@ -2415,380 +2348,6 @@ static void touchscreen_settings() {
             tVBOpt.MODIFIED = true;
             tVBOpt.TOUCH_BUTTONS = buttons_on_screen;
             [[gnu::musttail]] return touchscreen_settings();
-    }
-}
-
-static void init_colour_wheel(int col_int, float *hue_p, float *saturation_p, float *lightness_p) {
-    // tint to hue saturation
-    float col[3] = {
-        (col_int & 0xff) / 255.0,
-        ((col_int >> 8) & 0xff) / 255.0,
-        ((col_int >> 16) & 0xff) / 255.0,
-    };
-    float max_rg = col[0] > col[1] ? col[0] : col[1];
-    float lightness = max_rg > col[2] ? max_rg : col[2];
-    if (lightness_p) *lightness_p = lightness;
-    if (lightness != 0) {
-        col[0] /= lightness;
-        col[1] /= lightness;
-        col[2] /= lightness;
-    }
-    float max = col[0] > col[1] ? col[0] : col[1];
-    max = max > col[2] ? max : col[2];
-    float min = col[0] < col[1] ? col[0] : col[1];
-    min = min < col[2] ? min : col[2];
-    if (max == min) {
-        // white
-        *hue_p = *saturation_p = 0;
-    } else {
-        float chroma = max - min;
-        float hprime;
-        if (max == col[0]) {
-            hprime = (col[1] - col[2]) / chroma;
-        } else if (max == col[1]) {
-            hprime = (col[2] - col[0]) / chroma + 2;
-        } else {
-            hprime = (col[0] - col[1]) / chroma + 4;
-        }
-        *hue_p = hprime * (M_PI / 3);
-        *saturation_p = chroma / max;
-    }
-}
-
-static int make_color(float hue, float saturation, float lightness) {
-    float hprime = fmod(hue / (M_PI / 3) + 6, 6);
-    float sub = saturation * (1 - fabs(fmod(hprime, 2) - 1));
-    float col[3] = {0};
-    if (hprime < 1) {
-        col[0] = saturation;
-        col[1] = sub;
-    } else if (hprime < 2) {
-        col[0] = sub;
-        col[1] = saturation;
-    } else if (hprime < 3) {
-        col[1] = saturation;
-        col[2] = sub;
-    } else if (hprime < 4) {
-        col[1] = sub;
-        col[2] = saturation;
-    } else if (hprime < 5) {
-        col[0] = sub;
-        col[2] = saturation;
-    } else {
-        col[0] = saturation;
-        col[2] = sub;
-    }
-    return
-        ((int)((col[0] + 1 - saturation) * lightness * 255)) |
-        ((int)((col[1] + 1 - saturation) * lightness * 255) << 8) |
-        ((int)((col[2] + 1 - saturation) * lightness * 255) << 16);
-}
-
-static void col_to_str(char *out, int col) {
-    snprintf(out, 8, "#%02x%02x%02x", col & 0xff, (col >> 8) & 0xff, (col >> 16) & 0xff);
-}
-
-static SwkbdCallbackResult swkbd_colour_callback(void *user, const char **message, const char *text, size_t text_len) {
-    if (text_len != 7) goto fail;
-    if (text[0] != '#') goto fail;
-    for (int i = 1; i <= 6; i++) {
-        if (!(text[i] >= '0' && text[i] <= '9') && !(text[i] >= 'a' && text[i] <= 'f') && !(text[i] >= 'A' && text[i] <= 'F')) goto fail;
-    }
-    return SWKBD_CALLBACK_OK;
-    fail:
-    *message = "Please provide a valid hex\ncolor code (# followed by six\nhex digits, eg. #1234ab).";
-    return SWKBD_CALLBACK_CONTINUE;
-}
-
-static bool swkbd_colour(int *save_col) {
-    char string_buf[8];
-    col_to_str(string_buf, *save_col);
-
-    SwkbdState swkbd;
-    swkbdInit(&swkbd, SWKBD_TYPE_QWERTY, 2, sizeof(string_buf)-1);
-    swkbdSetValidation(&swkbd, SWKBD_NOTEMPTY_NOTBLANK, 0, 0);
-    swkbdSetFeatures(&swkbd, SWKBD_FIXED_WIDTH);
-    swkbdSetFilterCallback(&swkbd, swkbd_colour_callback, NULL);
-
-    swkbdSetInitialText(&swkbd, string_buf);
-
-    toggleVsync(false);
-    SwkbdButton button = swkbdInputText(&swkbd, string_buf, sizeof(string_buf));
-    toggleVsync(tVBOpt.VSYNC);
-
-    if (button == SWKBD_BUTTON_RIGHT) {
-        int rev_col = strtol(string_buf + 1, NULL, 16);
-        int new_col = (rev_col >> 16) | (rev_col & 0xff00) | ((rev_col & 0xff) << 16);
-        if (*save_col != new_col) {
-            *save_col = new_col;
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static SwkbdCallbackResult swkbd_scale_callback(void *user, const char **message, const char *text, size_t text_len) {
-    float scale = atoff(text);
-    if (scale < 1 || scale > 4) {
-        *message = "缩放比例必须在 1.0 到 4.0 之间。";
-        return SWKBD_CALLBACK_CONTINUE;
-    }
-    return SWKBD_CALLBACK_OK;
-}
-
-static bool swkbd_scale(float *scale) {
-    char string_buf[8];
-    snprintf(string_buf, sizeof(string_buf), "%.5f", *scale);
-
-    SwkbdState swkbd;
-    swkbdInit(&swkbd, SWKBD_TYPE_NUMPAD, 2, sizeof(string_buf)-1);
-    swkbdSetValidation(&swkbd, SWKBD_NOTEMPTY_NOTBLANK, 0, 0);
-    swkbdSetNumpadKeys(&swkbd, '.', '.');
-    swkbdSetFilterCallback(&swkbd, swkbd_scale_callback, NULL);
-
-    swkbdSetInitialText(&swkbd, string_buf);
-
-    toggleVsync(false);
-    SwkbdButton button = swkbdInputText(&swkbd, string_buf, sizeof(string_buf));
-    toggleVsync(tVBOpt.VSYNC);
-
-    if (button == SWKBD_BUTTON_RIGHT) {
-        *scale = atoff(string_buf);
-        return true;
-    }
-    return false;
-}
-
-static void handle_colour_wheel(int *save_col, int wheel_x, int wheel_y, float *hue, float *saturation, float *lightness) {
-    static bool dragging_wheel = false;
-    static bool dragging_lightness = false;
-    C2D_SpriteSetPos(&colour_wheel_sprite, wheel_x, wheel_y);
-    const float circle_x = colour_wheel_sprite.params.pos.x;
-    const float circle_y = colour_wheel_sprite.params.pos.y;
-    const float circle_w = colour_wheel_sprite.params.pos.w;
-    const float circle_h = colour_wheel_sprite.params.pos.h;
-
-    const int lightness_x = 16;
-    const int lightness_y = 16;
-    const int lightness_width = 32;
-    const int lightness_height = 180;
-    const int lightness_cursor_height = 10;
-
-    touchPosition touch_pos;
-    hidTouchRead(&touch_pos);
-    float touch_dx = (touch_pos.px - circle_x) / (circle_w / 2);
-    float touch_dy = (touch_pos.py - circle_y) / (circle_h / 2);
-    float sat = sqrt(touch_dx * touch_dx + touch_dy * touch_dy);
-    if ((hidKeysDown() & KEY_TOUCH)) {
-        if (sat <= 1) dragging_wheel = true;
-        if (lightness &&
-            (unsigned)(touch_pos.px - (lightness_x - 2)) < lightness_width &&
-            abs((int)(touch_pos.py - lightness_y)) < lightness_height
-        ) dragging_lightness = true;
-    }
-    if (hidKeysUp() & KEY_TOUCH) {
-        dragging_wheel = false;
-        dragging_lightness = false;
-    }
-    if (dragging_wheel) {
-        tVBOpt.MODIFIED = true;
-        if (sat > 1) {
-            touch_dx /= sat;
-            touch_dy /= sat;
-            sat = 1;
-        }
-        *saturation = sat;
-        // touch position to hue saturation, then to rgb
-        *hue = atan2(touch_dy, touch_dx);
-        *save_col = make_color(*hue, *saturation, lightness ? *lightness : 1);
-    }
-    if (dragging_lightness) {
-        *lightness = 1 - C2D_Clamp((float)(touch_pos.py - lightness_y) / lightness_height, 0, 1);
-        *save_col = make_color(*hue, *saturation, *lightness);
-    }
-    C2D_DrawSprite(&colour_wheel_sprite);
-    if (!dragging_wheel) {
-        touch_dx = *saturation * cos(*hue);
-        touch_dy = *saturation * sin(*hue);
-    }
-    C2D_DrawCircleSolid(
-        circle_x + touch_dx * (circle_w / 2),
-        circle_y + touch_dy * (circle_h / 2),
-        0, 4, 0xff000000);
-    C2D_DrawCircleSolid(
-        circle_x + touch_dx * (circle_w / 2),
-        circle_y + touch_dy * (circle_h / 2),
-        0, 2, 0xff000000 | *save_col);
-    if (lightness) {
-        int max_lightness = 0xff000000 | make_color(*hue, *saturation, 1);
-        C2D_DrawRectSolid(lightness_x - 1, lightness_y - 1, 0, lightness_width + 2, lightness_height + 2, 0xff000000 | make_color(*hue + M_PI, *saturation, 1));
-        C2D_DrawRectangle(lightness_x, lightness_y, 0, lightness_width, lightness_height, max_lightness, max_lightness, 0xff000000, 0xff000000);
-        C2D_DrawRectSolid(lightness_x - 2, lightness_y + lightness_height * (1 - *lightness) - lightness_cursor_height / 2, 0, lightness_width + 4, lightness_cursor_height, 0xffffffff);
-        C2D_DrawRectSolid(lightness_x - 1, lightness_y + lightness_height * (1 - *lightness) - lightness_cursor_height / 2 + 1, 0, lightness_width + 2, lightness_cursor_height - 2, 0xff000000);
-        C2D_DrawRectSolid(lightness_x, lightness_y + lightness_height * (1 - *lightness) - lightness_cursor_height / 2 + 2, 0, lightness_width, lightness_cursor_height - 4, 0xff000000 | *save_col);
-    }
-}
-
-static void colour_filter(void) {
-    float hue, saturation, lightness;
-    init_colour_wheel(tVBOpt.TINT, &hue, &saturation, NULL);
-
-    LOOP_BEGIN(colour_filter_buttons, -1);
-        handle_colour_wheel(&tVBOpt.TINT, 176, 112, &hue, &saturation, NULL);
-    LOOP_END(colour_filter_buttons);
-
-    switch (button) {
-        case COLOUR_BACK: // Back
-            [[gnu::musttail]] return barrier_settings(BARRIER_SETTINGS);
-        case COLOUR_RED: // Red
-            tVBOpt.TINT = 0x0000ff;
-            tVBOpt.MODIFIED = true;
-            [[gnu::musttail]] return colour_filter();
-        case COLOUR_GRAY: // Gray
-            tVBOpt.TINT = 0xffffff;
-            tVBOpt.MODIFIED = true;
-            [[gnu::musttail]] return colour_filter();
-    }
-}
-
-static void multicolour_wheel(int palette_id, int colour_id) {
-    float hue, saturation, lightness;
-    init_colour_wheel(tVBOpt.MTINT[palette_id][colour_id], &hue, &saturation, &lightness);
-
-    const int scale_x = 272;
-    const int scale_y = 40;
-    const int scale_width = 32;
-    const int scale_height = 160;
-    const int scale_cursor_height = 10;
-    const int scale_offset = 1;
-    const int scale_range = 3;
-
-    bool dragging_scale = 0;
-
-    multicolour_wheel_buttons[MULTIWHEEL_SCALE].hidden = colour_id == 0;
-
-    LOOP_BEGIN(multicolour_wheel_buttons, 0);
-        char initial_string[9];
-        C2D_TextBufClear(dynamic_textbuf);
-
-        col_to_str(initial_string, tVBOpt.MTINT[palette_id][colour_id]);
-        C2D_TextParse(&multicolour_wheel_buttons[MULTIWHEEL_HEX].text, dynamic_textbuf, initial_string);
-        C2D_TextOptimize(&multicolour_wheel_buttons[MULTIWHEEL_HEX].text);
-
-        snprintf(initial_string, sizeof(initial_string), "%.5f", tVBOpt.STINT[palette_id][colour_id - 1]);
-        C2D_TextParse(&multicolour_wheel_buttons[MULTIWHEEL_SCALE].text, dynamic_textbuf, initial_string);
-        C2D_TextOptimize(&multicolour_wheel_buttons[MULTIWHEEL_SCALE].text);
-
-        handle_colour_wheel(&tVBOpt.MTINT[palette_id][colour_id], 160, 112, &hue, &saturation, &lightness);
-
-        if (colour_id != 0) {
-            touchPosition touch_pos;
-            hidTouchRead(&touch_pos);
-
-            if ((hidKeysDown() & KEY_TOUCH)) {
-                if ((unsigned)(touch_pos.px - (scale_x)) < scale_width &&
-                    abs((int)(touch_pos.py - scale_y)) < scale_height
-                ) dragging_scale = true;
-            }
-            if (hidKeysUp() & KEY_TOUCH) {
-                dragging_scale = false;
-            }
-            if (dragging_scale) {
-                tVBOpt.MODIFIED = true;
-                float slider = 1 - C2D_Clamp((float)(touch_pos.py - scale_y) / scale_height, 0, 1);
-                tVBOpt.STINT[palette_id][colour_id - 1] = slider * scale_range + scale_offset;
-            }
-
-            C2D_DrawText(&text_brighten, C2D_AlignCenter | C2D_WithColor, scale_x + scale_width / 2, scale_y - 24, 0, 0.5, 0.5, TINT_COLOR);
-            C2D_DrawText(&text_brightness_disclaimer, C2D_AlignRight | C2D_WithColor, 316, 0, 0, 0.5, 0.5, TINT_COLOR);
-            C2D_DrawRectSolid(scale_x + scale_width / 2 - 1, scale_y, 0, 2, scale_height, 0xff404040);
-            C2D_DrawRectSolid(scale_x, scale_y + scale_height * (1 - (tVBOpt.STINT[palette_id][colour_id - 1] - scale_offset) / scale_range) - scale_cursor_height / 2, 0, scale_width, scale_cursor_height, TINT_COLOR);
-        }
-
-    LOOP_END(multicolour_wheel_buttons);
-
-    switch (button) {
-        case MULTIWHEEL_BACK:
-            [[gnu::musttail]] return multicolour_settings(palette_id, colour_id);
-        case MULTIWHEEL_HEX:
-            if (swkbd_colour(&tVBOpt.MTINT[palette_id][colour_id])) tVBOpt.MODIFIED = true;
-            [[gnu::musttail]] return multicolour_wheel(palette_id, colour_id);
-        case MULTIWHEEL_SCALE:
-            if (swkbd_scale(&tVBOpt.STINT[palette_id][colour_id - 1])) tVBOpt.MODIFIED = true;
-            [[gnu::musttail]] return multicolour_wheel(palette_id, colour_id);
-    }
-}
-
-static void multicolour_picker(int initial_button) {
-    LOOP_BEGIN(multicolour_picker_buttons, initial_button);
-    LOOP_END(multicolour_picker_buttons);
-    if (button == MULTIPICKER_BACK) {
-        [[gnu::musttail]] return barrier_settings(BARRIER_SETTINGS);
-    } else {
-        if (tVBOpt.MULTIID != button / 2) {
-            tVBOpt.MODIFIED = true;
-            tVBOpt.MULTIID = button / 2;
-        }
-        if (button % 2) [[gnu::musttail]] return multicolour_settings(button / 2, 0);
-        else [[gnu::musttail]] return multicolour_picker(button);
-    }
-}
-
-static void multicolour_settings(int palette_id, int initial_button) {
-    // local variables are static to avoid blowing up frame size and preventing tail call optimization
-    static C2D_Text darkest_col, dark_col, light_col, lightest_col;
-    static C2D_Text dark_scale, light_scale, lightest_scale;
-
-    static char textbuf[8];
-    C2D_TextBufClear(dynamic_textbuf);
-
-    col_to_str(textbuf, tVBOpt.MTINT[palette_id][0]);
-    C2D_TextParse(&darkest_col, dynamic_textbuf, textbuf);
-    C2D_TextOptimize(&darkest_col);
-
-    col_to_str(textbuf, tVBOpt.MTINT[palette_id][1]);
-    C2D_TextParse(&dark_col, dynamic_textbuf, textbuf);
-    C2D_TextOptimize(&dark_col);
-
-    col_to_str(textbuf, tVBOpt.MTINT[palette_id][2]);
-    C2D_TextParse(&light_col, dynamic_textbuf, textbuf);
-    C2D_TextOptimize(&light_col);
-
-    col_to_str(textbuf, tVBOpt.MTINT[palette_id][3]);
-    C2D_TextParse(&lightest_col, dynamic_textbuf, textbuf);
-    C2D_TextOptimize(&lightest_col);
-
-    snprintf(textbuf, sizeof(textbuf), "%.5f", tVBOpt.STINT[palette_id][0]);
-    C2D_TextParse(&dark_scale, dynamic_textbuf, textbuf);
-    C2D_TextOptimize(&dark_scale);
-
-    snprintf(textbuf, sizeof(textbuf), "%.5f", tVBOpt.STINT[palette_id][1]);
-    C2D_TextParse(&light_scale, dynamic_textbuf, textbuf);
-    C2D_TextOptimize(&light_scale);
-
-    snprintf(textbuf, sizeof(textbuf), "%.5f", tVBOpt.STINT[palette_id][2]);
-    C2D_TextParse(&lightest_scale, dynamic_textbuf, textbuf);
-    C2D_TextOptimize(&lightest_scale);
-
-    LOOP_BEGIN(multicolour_settings_buttons, initial_button);
-        C2D_DrawRectSolid(16 + 170 + 8, 48 * 0 + 16 + 1, 0, 38, 38, 0xff000000 | tVBOpt.MTINT[palette_id][0]);
-        C2D_DrawRectSolid(16 + 170 + 8, 48 * 1 + 16 + 1, 0, 38, 38, 0xff000000 | tVBOpt.MTINT[palette_id][1]);
-        C2D_DrawRectSolid(16 + 170 + 8, 48 * 2 + 16 + 1, 0, 38, 38, 0xff000000 | tVBOpt.MTINT[palette_id][2]);
-        C2D_DrawRectSolid(16 + 170 + 8, 48 * 3 + 16 + 1, 0, 38, 38, 0xff000000 | tVBOpt.MTINT[palette_id][3]);
-
-        C2D_DrawText(&darkest_col, C2D_WithColor | C2D_AlignRight, 316, 48 * 0 + 24, 0, 0.7, 0.7, TINT_COLOR);
-        C2D_DrawText(&dark_col, C2D_WithColor | C2D_AlignRight, 316, 48 * 1 + 16, 0, 0.7, 0.7, TINT_COLOR);
-        C2D_DrawText(&light_col, C2D_WithColor | C2D_AlignRight, 316, 48 * 2 + 16, 0, 0.7, 0.7, TINT_COLOR);
-        C2D_DrawText(&lightest_col, C2D_WithColor | C2D_AlignRight, 316, 48 * 3 + 16, 0, 0.7, 0.7, TINT_COLOR);
-        C2D_DrawText(&dark_scale, C2D_WithColor | C2D_AlignRight, 316, 48 * 1 + 36, 0, 0.7, 0.7, TINT_COLOR);
-        C2D_DrawText(&light_scale, C2D_WithColor | C2D_AlignRight, 316, 48 * 2 + 36, 0, 0.7, 0.7, TINT_COLOR);
-        C2D_DrawText(&lightest_scale, C2D_WithColor | C2D_AlignRight, 316, 48 * 3 + 36, 0, 0.7, 0.7, TINT_COLOR);
-    LOOP_END(multicolour_settings_buttons);
-    if (button == MULTI_BACK) {
-        [[gnu::musttail]] return multicolour_picker(palette_id * 2 + 1);
-    } else {
-        [[gnu::musttail]] return multicolour_wheel(palette_id, button);
     }
 }
 
@@ -3040,21 +2599,22 @@ static void video_settings(int initial_button) {
 }
 
 static void barrier_settings(int initial_button) {
-    barrier_settings_buttons[BARRIER_MODE].toggle = tVBOpt.MULTICOL;
+    tVBOpt.MULTICOL = true;
+    barrier_settings_buttons[BARRIER_MODE].option = colour_mode_normalize(tVBOpt.MULTIID);
     barrier_settings_buttons[BARRIER_DEFAULT_EYE].toggle = tVBOpt.DEFAULT_EYE;
     LOOP_BEGIN(barrier_settings_buttons, initial_button);
+        for (int shade = 0; shade < COLOUR_SHADE_COUNT; shade++) {
+            const int x = 16 + shade * 72;
+            C2D_DrawRectSolid(x, 80, 0, 64, 32, BLACK);
+            C2D_DrawRectSolid(x + 1, 81, 0, 62, 30,
+                0xff000000 | colour_mode_value(barrier_settings_buttons[BARRIER_MODE].option, shade));
+        }
     LOOP_END(barrier_settings_buttons);
     switch (button) {
         case BARRIER_MODE:
-            tVBOpt.MULTICOL = !tVBOpt.MULTICOL;
+            tVBOpt.MULTIID = (barrier_settings_buttons[BARRIER_MODE].option + 1) % COLOUR_MODE_COUNT;
             tVBOpt.MODIFIED = true;
             [[gnu::musttail]] return barrier_settings(button);
-        case BARRIER_SETTINGS: // Colour filter
-            if (tVBOpt.MULTICOL) {
-                [[gnu::musttail]] return multicolour_picker(0);
-            } else {
-                [[gnu::musttail]] return colour_filter();
-            }
         case BARRIER_DEFAULT_EYE: // Default eye
             tVBOpt.DEFAULT_EYE = !tVBOpt.DEFAULT_EYE;
             tVBOpt.MODIFIED = true;
@@ -3559,8 +3119,6 @@ void guiInit(void) {
     C2D_SetTintMode(C2D_TintMult);
 
     sprite_sheet = C2D_SpriteSheetLoadFromMem(sprites_t3x, sprites_t3x_size);
-    C2D_SpriteFromSheet(&colour_wheel_sprite, sprite_sheet, sprites_colour_wheel_idx);
-    C2D_SpriteSetCenter(&colour_wheel_sprite, 0.5, 0.5);
     C2D_SpriteFromSheet(&logo_sprite, sprite_sheet, sprites_logo_idx);
     C2D_SpriteSetCenter(&logo_sprite, 0.5, 0.5);
     C2D_SpriteFromSheet(&text_3ds_sprite, sprite_sheet, sprites_3ds_text_idx);
@@ -3669,10 +3227,9 @@ void guiInit(void) {
     STATIC_TEXT(&text_depth, "深度")
     STATIC_TEXT(&text_cpp_on, "已连接圆形摇杆 Pro。")
     STATIC_TEXT(&text_cpp_off, "未检测到圆形摇杆 Pro。")
-    STATIC_TEXT(&text_monochrome, "单色")
-    STATIC_TEXT(&text_multicolor, "多色")
-    STATIC_TEXT(&text_brighten, "调亮")
-    STATIC_TEXT(&text_brightness_disclaimer, "亮度可能因游戏而异。")
+    STATIC_TEXT(&text_colour_mode_1, "模式 1")
+    STATIC_TEXT(&text_colour_mode_2, "模式 2")
+    STATIC_TEXT(&text_colour_mode_3, "模式 3")
     STATIC_TEXT(&text_multi_waiting, "等待连接...")
     STATIC_TEXT(&text_multi_preparing, "对方准备中...")
     STATIC_TEXT(&text_downloading, "下载中...")

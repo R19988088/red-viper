@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include "vb_dsp.h"
+#include "colour_modes.h"
 #include "v810_mem.h"
 #include "vb_set.h"
 
@@ -24,31 +25,17 @@ void setup_brightness_lut(void) {
 }
 
 int video_get_colour(int id, int brt_reg) {
-	if (id == 0) {
-		return tVBOpt.MULTICOL && !tVBOpt.ANAGLYPH ? tVBOpt.MTINT[tVBOpt.MULTIID][0] : 0;
-	}
-	int brightness = clamp255(brightness_lut[clamp255(brt_reg)] * (tVBOpt.MULTICOL && !tVBOpt.ANAGLYPH ? tVBOpt.STINT[tVBOpt.MULTIID][id - 1] : 1));
-	int fulltint = tVBOpt.ANAGLYPH ? 0xffffff : tVBOpt.MULTICOL ? tVBOpt.MTINT[tVBOpt.MULTIID][id] : tVBOpt.TINT;
+    if (!tVBOpt.ANAGLYPH) return colour_mode_value(tVBOpt.MULTIID, id);
+    if (id == 0) {
+        return 0;
+    }
+    int brightness = clamp255(brightness_lut[clamp255(brt_reg)]);
+    int fulltint = 0xffffff;
 	int col_tint =
 		((brightness * ((fulltint) & 0xff) / 255)) |
 		((brightness * ((fulltint >> 8) & 0xff) / 255) << 8) |
 		((brightness * ((fulltint >> 16) & 0xff) / 255) << 16);
-	if (tVBOpt.ANAGLYPH || !tVBOpt.MULTICOL) return col_tint;
-
-	int black_brightness = 255 - brightness;
-	int black_tint = tVBOpt.ANAGLYPH ? 0 :
-		((black_brightness * ((tVBOpt.MTINT[tVBOpt.MULTIID][0]) & 0xff) / 255)) |
-		((black_brightness * ((tVBOpt.MTINT[tVBOpt.MULTIID][0] >> 8) & 0xff) / 255) << 8) |
-		((black_brightness * ((tVBOpt.MTINT[tVBOpt.MULTIID][0] >> 16) & 0xff) / 255) << 16);
-
-	#if DRC_AVAILABLE
-	return __builtin_arm_uqadd8(col_tint, black_tint);
-	#else
-	return ((col_tint + black_tint) & 0xff)
-		| (((col_tint & ~0xff) + (black_tint & ~0xff)) & 0xff00)
-		| (((col_tint & ~0xffff) + (black_tint & ~0xffff)) & 0xff0000)
-		| (((col_tint & ~0xffffff) + (black_tint & ~0xffffff)) & 0xff000000);
-	#endif
+    return col_tint;
 }
 
 int videoProcessingTime(void) {

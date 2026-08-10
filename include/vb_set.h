@@ -57,11 +57,11 @@ typedef struct VB_OPT {
     int   DSPMODE;  // Normal, 3D, etc
     int   DSPSWAP;  // Swap 3D effect, 0 normal, 1 swap
     int   DSP2X;    // Double screen size
-    bool  MULTICOL; // Multicolour toggle
+    bool  MULTICOL; // Fixed colour modes enabled
     int   TINT;     // Colour tint
-    int   MULTIID;  // Multicolour ID
-    int   MTINT[4][4]; // Multicolour tints
-    float STINT[4][3]; // Tint scale
+    int   MULTIID;  // Fixed colour mode index
+    int   MTINT[4][4]; // Legacy palette tints
+    float STINT[4][3]; // Legacy tint scales
     int   PALMODE;  // Select a palette Type: 0-normal, 1-red, etc...
     int   DEBUG;    // Release vs Debug
     int   STDOUT;   // File vs Screen (debug)
