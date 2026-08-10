@@ -310,6 +310,7 @@ static Button multiplayer_menu_buttons[] = {
 static void multiplayer_wait_for_peer(void);
 
 static bool rom_loader(char *message);
+static bool rom_loader_impl(char *message, bool refresh);
 static Button rom_loader_buttons[] = {
     #define ROM_LOADER_UP 0
     {.str="上一级", .up_action=true, .x=128, .y=8, .w=64, .h=24, .text_scale=0.5f},
@@ -1145,14 +1146,21 @@ static const char *rom_display_path(const char *path) {
 }
 
 static bool rom_loader(char *message) {
+    return rom_loader_impl(message, true);
+}
+
+static bool rom_loader_impl(char *message, bool refresh) {
     static char path[300] = {0};
     static char old_dir[300] = {0};
-    if (!path[0]) {
+    if (refresh) {
         if (tVBOpt.ROM_PATH[0]) {
             strcpy(path, tVBOpt.ROM_PATH);
         } else {
             path[0] = 0;
         }
+        old_dir[0] = 0;
+    } else if (!path[0]) {
+        path[0] = 0;
     }
     if (!old_dir[0] && tVBOpt.ROM_PATH[0]) strcpy(old_dir, tVBOpt.ROM_PATH);
 
@@ -1488,13 +1496,13 @@ static bool rom_loader(char *message) {
                     // so we can just get rid of the slash at the end
                     path[len - 1] = 0;
                 }
-                [[gnu::musttail]] return rom_loader(message);
+                [[gnu::musttail]] return rom_loader_impl(message, false);
             }
             case ROM_LOADER_BACK: return false;
             default: return false; // not gonna happen but fixes a compiler warning
         }
     } else if (clicked_entry < dirCount) {
-        [[gnu::musttail]] return rom_loader(message);
+        [[gnu::musttail]] return rom_loader_impl(message, false);
     } else {
         // clear screen buffer
         for (int i = 0; i < 2; i++) {
