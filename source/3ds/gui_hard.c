@@ -160,6 +160,7 @@ typedef struct {
 
 static MenuTheme menu_theme(void) {
     int mode = colour_mode_normalize(tVBOpt.MULTIID);
+    unsigned shade0 = colour_mode_value(mode, COLOUR_SHADE_BACKGROUND);
     unsigned shade1 = colour_mode_value(mode, COLOUR_SHADE_DISABLED);
     unsigned shade2 = colour_mode_value(mode, COLOUR_SHADE_READY);
     unsigned shade3 = colour_mode_value(mode, COLOUR_SHADE_ACTIVE);
@@ -169,7 +170,7 @@ static MenuTheme menu_theme(void) {
         .nav_selected_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
         .disabled_text = C2D_Color32(COLOR_R(shade1), COLOR_G(shade1), COLOR_B(shade1), 255),
         .option_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
-        .panel_bg = C2D_Color32(COLOR_R(shade2), COLOR_G(shade2), COLOR_B(shade2), 255),
+        .panel_bg = C2D_Color32(COLOR_R(shade0), COLOR_G(shade0), COLOR_B(shade0), 255),
         .row_selected_bg = C2D_Color32(COLOR_R(shade1), COLOR_G(shade1), COLOR_B(shade1), 255),
         .row_selected_text = C2D_Color32(COLOR_R(shade3), COLOR_G(shade3), COLOR_B(shade3), 255),
     };
@@ -522,13 +523,13 @@ static Button touchscreen_settings_buttons[] = {
 static void options(int initial_button);
 static Button options_buttons[] = {
     #define OPTIONS_COLOUR 0
-    {.str="色彩模式", .x=128, .y=24, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_colour_mode_1, &text_colour_mode_2, &text_colour_mode_3}, .transparent=true, .themed=true},
+    {.str="色彩模式", .x=120, .y=24, .w=200, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_colour_mode_1, &text_colour_mode_2, &text_colour_mode_3}, .transparent=true, .themed=true},
     #define OPTIONS_3D 1
-    {.str="3D 模式", .x=128, .y=72, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_anaglyph}, .transparent=true, .themed=true, .disabled=true},
+    {.str="3D 模式", .x=120, .y=72, .w=200, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_anaglyph}, .transparent=true, .themed=true, .disabled=true},
     #define OPTIONS_SLIDER 2
-    {.str="滑块模式", .x=128, .y=120, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_vbipd}, .transparent=true, .themed=true},
+    {.str="滑块模式", .x=120, .y=120, .w=200, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_vbipd}, .transparent=true, .themed=true},
     #define OPTIONS_LANGUAGE 3
-    {.str="语言", .x=128, .y=168, .w=176, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_language_chinese, &text_language_japanese, &text_language_english}, .transparent=true, .themed=true},
+    {.str="语言", .x=120, .y=168, .w=200, .h=32, .show_option=true, .left_aligned=true, .option_texts=(C2D_Text*[]){&text_language_chinese, &text_language_japanese, &text_language_english}, .transparent=true, .themed=true},
     #define OPTIONS_BACK 4
     {.hidden=true, .back_action=true},
 };
@@ -793,6 +794,7 @@ typedef struct {
     char **files;
     int file_count;
     int cursor;
+    u64 last_refresh;
 } RomPreviewCache;
 
 static RomPreviewCache rom_preview_cache;
@@ -804,29 +806,8 @@ static char *copy_rom_entry_name(const char *name) {
     return copy;
 }
 
-static void clear_rom_preview_cache(void) {
-    for (int i = 0; i < rom_preview_cache.dir_count; i++) free(rom_preview_cache.dirs[i]);
-    for (int i = 0; i < rom_preview_cache.file_count; i++) free(rom_preview_cache.files[i]);
-    free(rom_preview_cache.dirs);
-    free(rom_preview_cache.files);
-    rom_preview_cache.dirs = NULL;
-    rom_preview_cache.files = NULL;
-    rom_preview_cache.dir_count = 0;
-    rom_preview_cache.file_count = 0;
-    rom_preview_cache.valid = false;
-}
-
-static bool refresh_rom_preview(const char *requested_path) {
-    clear_rom_preview_cache();
-    char path[300];
-    if (requested_path && requested_path[0]) strncpy(path, requested_path, sizeof(path) - 1);
-    else strcpy(path, "sdmc:/");
-    path[sizeof(path) - 1] = 0;
-
-    char *slash = strrchr(path, '/');
-    if (slash) slash[1] = 0;
-    if (strlen(path) < 6) strcpy(path, "sdmc:/");
-
+static bool scan_rom_directory(const char *path, char ***dirs_out, int *dir_count_out,
+    char ***files_out, int *file_count_out) {
     DIR *dir_handle = opendir(path);
     if (!dir_handle) return false;
 
@@ -858,6 +839,40 @@ static bool refresh_rom_preview(const char *requested_path) {
     closedir(dir_handle);
     qsort(files, file_count, sizeof(char*), strptrcmp);
     qsort(dirs, dir_count, sizeof(char*), strptrcmp);
+    *dirs_out = dirs;
+    *dir_count_out = dir_count;
+    *files_out = files;
+    *file_count_out = file_count;
+    return true;
+}
+
+static void clear_rom_preview_cache(void) {
+    for (int i = 0; i < rom_preview_cache.dir_count; i++) free(rom_preview_cache.dirs[i]);
+    for (int i = 0; i < rom_preview_cache.file_count; i++) free(rom_preview_cache.files[i]);
+    free(rom_preview_cache.dirs);
+    free(rom_preview_cache.files);
+    rom_preview_cache.dirs = NULL;
+    rom_preview_cache.files = NULL;
+    rom_preview_cache.dir_count = 0;
+    rom_preview_cache.file_count = 0;
+    rom_preview_cache.valid = false;
+}
+
+static bool refresh_rom_preview(const char *requested_path) {
+    clear_rom_preview_cache();
+    char path[300];
+    if (requested_path && requested_path[0]) strncpy(path, requested_path, sizeof(path) - 1);
+    else strcpy(path, "sdmc:/");
+    path[sizeof(path) - 1] = 0;
+
+    char *slash = strrchr(path, '/');
+    if (slash) slash[1] = 0;
+    if (strlen(path) < 6) strcpy(path, "sdmc:/");
+
+    char **dirs = NULL;
+    char **files = NULL;
+    int dir_count = 0, file_count = 0;
+    if (!scan_rom_directory(path, &dirs, &dir_count, &files, &file_count)) return false;
 
     strncpy(rom_preview_cache.path, path, sizeof(rom_preview_cache.path) - 1);
     rom_preview_cache.path[sizeof(rom_preview_cache.path) - 1] = 0;
@@ -866,13 +881,14 @@ static bool refresh_rom_preview(const char *requested_path) {
     rom_preview_cache.dir_count = dir_count;
     rom_preview_cache.file_count = file_count;
     rom_preview_cache.cursor = 0;
+    rom_preview_cache.last_refresh = osGetTime();
     rom_preview_cache.valid = true;
     return true;
 }
 
 static void draw_main_menu_shell(int active_item) {
     MenuTheme theme = menu_theme();
-    C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+    C2D_DrawRectSolid(120, 0, 0, 200, 240, theme.panel_bg);
     for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
         Button *button = &main_menu_buttons[i];
         if (button->hidden) continue;
@@ -912,12 +928,15 @@ static void draw_main_menu_preview(int active_item, MenuTheme theme) {
             options_buttons[OPTIONS_LANGUAGE].option = tVBOpt.LANGUAGE;
             for (int i = OPTIONS_COLOUR; i <= OPTIONS_LANGUAGE; i++) {
                 Button *option = &options_buttons[i];
-                u32 label_colour = theme.disabled_text;
-                u32 value_colour = option->disabled ? theme.disabled_text : theme.option_text;
+                const float y = 24 + i * 48;
+                u32 label_colour = option->disabled ? theme.disabled_text : theme.nav_text;
+                u32 value_bg = option->disabled ? theme.panel_bg : theme.row_selected_bg;
+                u32 value_colour = option->disabled ? theme.disabled_text : theme.row_selected_text;
                 C2D_DrawText(&option->text, C2D_AlignLeft | C2D_WithColor,
-                    136, 28 + i * 40, 0, 0.55, 0.55, label_colour);
+                    128, y + 6, 0, 0.55, 0.55, label_colour);
+                C2D_DrawRectSolid(216, y, 0, 88, 32, value_bg);
                 C2D_DrawText(option->option_texts[option->option], C2D_AlignLeft | C2D_WithColor,
-                    224, 28 + i * 40, 0, 0.5, 0.5, value_colour);
+                    260, y + 6, 0, 0.5, 0.5, value_colour);
             }
             break;
         case MAIN_MENU_MULTI:
@@ -942,12 +961,12 @@ static void draw_main_menu_preview(int active_item, MenuTheme theme) {
                     rom_display_path(rom_preview_cache.path));
                 C2D_TextOptimize(&path_text);
                 C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor,
-                    136, 12, 0, 0.45, 0.45, theme.nav_selected_text);
+                    128, 4, 0, 0.5, 0.5, theme.nav_selected_text);
                 int entries = rom_preview_cache.dir_count + rom_preview_cache.file_count;
                 for (int i = 0; i < entries && i < 6; i++) {
                     const char *name = i < rom_preview_cache.dir_count ?
                         rom_preview_cache.dirs[i] : rom_preview_cache.files[i - rom_preview_cache.dir_count];
-                    draw_preview_text(name, 136, 36 + i * 28, 0.45,
+                    draw_preview_text(name, 128, 32 + i * 28, 0.45,
                         i == rom_preview_cache.cursor ? theme.nav_selected_text : theme.disabled_text);
                 }
             }
@@ -959,10 +978,8 @@ static void draw_main_menu_preview(int active_item, MenuTheme theme) {
 
 static void draw_main_menu_panel(void) {
     MenuTheme theme = menu_theme();
-    C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+    C2D_DrawRectSolid(120, 0, 0, 200, 240, theme.panel_bg);
     if (selectedButton) {
-        C2D_DrawText(&selectedButton->text, C2D_AlignCenter | C2D_WithColor,
-            216, 24, 0, 0.65, 0.65, theme.nav_selected_text);
         int active_item = -1;
         for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
             if (selectedButton == &main_menu_buttons[i]) {
@@ -978,6 +995,9 @@ static void draw_main_menu_panel(void) {
                 if (active_item == MAIN_MENU_SAVESTATES)
                     refresh_savestate_cache();
             }
+            if (active_item == MAIN_MENU_LOAD_ROM &&
+                (!rom_preview_cache.valid || osGetTime() - rom_preview_cache.last_refresh >= 500))
+                refresh_rom_preview(tVBOpt.ROM_PATH);
             draw_main_menu_preview(active_item, theme);
         }
     }
@@ -1374,6 +1394,7 @@ static bool rom_loader_impl(char *message, bool refresh) {
     float scroll_pos = scroll_top;
     float scroll_speed = 0;
     int cursor = 0;
+    u64 last_refresh = osGetTime();
 
     if (old_dir[0] && strstr(old_dir, path) == old_dir) {
         char *filename = strrchr(old_dir, '/');
@@ -1414,6 +1435,51 @@ static bool rom_loader_impl(char *message, bool refresh) {
     MenuTheme menu_colours = menu_theme();
     LOOP_BEGIN(rom_loader_buttons, -1);
         draw_main_menu_shell(MAIN_MENU_LOAD_ROM);
+        if (osGetTime() - last_refresh >= 500) {
+            last_refresh = osGetTime();
+            char **new_dirs = NULL;
+            char **new_files = NULL;
+            int new_dir_count = 0;
+            int new_file_count = 0;
+            if (scan_rom_directory(path, &new_dirs, &new_dir_count,
+                    &new_files, &new_file_count)) {
+                char selected_name[300] = {0};
+                int old_entry_count = dirCount + fileCount;
+                if (old_entry_count > 0 && cursor < old_entry_count) {
+                    const char *selected = cursor < dirCount ? dirs[cursor] : files[cursor - dirCount];
+                    strncpy(selected_name, selected, sizeof(selected_name) - 1);
+                }
+                for (int i = 0; i < dirCount; i++) free(dirs[i]);
+                for (int i = 0; i < fileCount; i++) free(files[i]);
+                free(dirs);
+                free(files);
+                dirs = new_dirs;
+                files = new_files;
+                dirCount = new_dir_count;
+                fileCount = new_file_count;
+                entry_count = dirCount + fileCount;
+                scroll_bottom = entry_count * entry_height - 240;
+                if (scroll_bottom < scroll_top) scroll_bottom = scroll_top;
+                cursor = 0;
+                if (selected_name[0]) {
+                    for (int i = 0; i < entry_count; i++) {
+                        const char *candidate = i < dirCount ? dirs[i] : files[i - dirCount];
+                        if (strcmp(candidate, selected_name) == 0) {
+                            cursor = i;
+                            break;
+                        }
+                    }
+                }
+                if (entry_count == 0) cursor = 0;
+                else if (cursor >= entry_count) cursor = entry_count - 1;
+                scroll_pos = C2D_Clamp(scroll_pos, scroll_top, scroll_bottom);
+                scroll_speed = 0;
+                clicked_entry = -1;
+            } else {
+                free(new_dirs);
+                free(new_files);
+            }
+        }
         // process rom list
         touchPosition touch_pos;
         hidTouchRead(&touch_pos);
@@ -1561,7 +1627,7 @@ static bool rom_loader_impl(char *message, bool refresh) {
         }
 
         // draw
-        C2D_DrawRectSolid(120, 8, 0, 192, 224, menu_colours.panel_bg);
+        C2D_DrawRectSolid(120, 0, 0, 200, 240, menu_colours.panel_bg);
         C2D_TextBufClear(dynamic_textbuf);
         float y = -scroll_pos;
         C2D_Text path_text;
@@ -1570,8 +1636,8 @@ static bool rom_loader_impl(char *message, bool refresh) {
             if (y + entry_height >= 0 && y < 240) {
                 C2D_TextParse(&path_text, dynamic_textbuf, i < dirCount ? dirs[i] : files[i - dirCount]);
                 C2D_TextOptimize(&path_text);
-                C2D_DrawRectSolid(120, y, 0, 192, entry_height, clicked_entry == i ? menu_colours.row_selected_bg : menu_colours.panel_bg);
-                if (cursor == i) C2D_DrawRectSolid(124, y + entry_height - 8, 0, 184, 1, menu_colours.nav_selected_text);
+                C2D_DrawRectSolid(120, y, 0, 200, entry_height, clicked_entry == i ? menu_colours.row_selected_bg : menu_colours.panel_bg);
+                if (cursor == i) C2D_DrawRectSolid(124, y + entry_height - 8, 0, 192, 1, menu_colours.nav_selected_text);
                 C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, y + 8, 0, 0.5, 0.5,
                     cursor == i ? menu_colours.row_selected_text : menu_colours.disabled_text);
             }
@@ -1579,26 +1645,26 @@ static bool rom_loader_impl(char *message, bool refresh) {
         }
         // scrollbar
         if (scroll_top != scroll_bottom) {
-            C2D_DrawRectSolid(310, 32, 0, 2, 240-32, menu_background_color());
-            C2D_DrawRectSolid(310, 32 + (240-32-8) * (scroll_pos - scroll_top) / (scroll_bottom - scroll_top), 0, 2, 8, menu_colours.nav_selected_text);
+            C2D_DrawRectSolid(318, 24, 0, 2, 216, menu_background_color());
+            C2D_DrawRectSolid(318, 24 + (216-8) * (scroll_pos - scroll_top) / (scroll_bottom - scroll_top), 0, 2, 8, menu_colours.nav_selected_text);
         }
         // path
         C2D_TextParse(&path_text, dynamic_textbuf, rom_display_path(path));
         C2D_TextOptimize(&path_text);
-        C2D_DrawRectSolid(120, 8, 0, 192, 24, menu_colours.panel_bg);
+        C2D_DrawRectSolid(120, 0, 0, 200, 24, menu_colours.panel_bg);
 
         if (message) {
             C2D_Text message_text;
             C2D_TextParse(&message_text, dynamic_textbuf, message);
             C2D_TextOptimize(&message_text);
-            C2D_DrawText(&message_text, C2D_AlignLeft | C2D_WithColor, 128, 8, 0, 0.5, 0.5, menu_colours.nav_selected_text);
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 13, 0, 0.5, 0.5, menu_colours.disabled_text);
+            C2D_DrawText(&message_text, C2D_AlignLeft | C2D_WithColor, 128, 4, 0, 0.5, 0.5, menu_colours.nav_selected_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 4, 0, 0.5, 0.5, menu_colours.disabled_text);
         } else {
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 13, 0, 0.5, 0.5, menu_colours.disabled_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, 4, 0, 0.5, 0.5, menu_colours.disabled_text);
         }
 
         // up button indicator
-        C2D_DrawText(&text_btn_X, C2D_AlignLeft | C2D_WithColor, 128, 36, 0, 0.55, 0.55, menu_colours.nav_selected_text);
+        C2D_DrawText(&text_btn_X, C2D_AlignLeft | C2D_WithColor, 128, 28, 0, 0.55, 0.55, menu_colours.nav_selected_text);
     LOOP_END(rom_loader_buttons);
 
     #undef DEFAULT_RETURN
@@ -3038,7 +3104,7 @@ static void savestate_menu(int initial_button, int selected_state) {
         if (keys_down & KEY_UP) selected_state = selected_state == 0 ? 9 : selected_state - 1;
         if (keys_down & KEY_DOWN) selected_state = selected_state == 9 ? 0 : selected_state + 1;
         savestate_buttons[LOAD_SAVESTATE].hidden = !savestate_cache.exists[selected_state];
-        C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+        C2D_DrawRectSolid(120, 0, 0, 200, 240, theme.panel_bg);
         C2D_DrawText(&text_savestate_menu, C2D_AlignCenter | C2D_WithColor,
             216, 16, 0, 0.7, 0.7, theme.nav_selected_text);
         for (int slot = 0; slot < 10; slot++) {
@@ -3382,9 +3448,19 @@ static inline int handle_buttons(Button buttons[], int count) {
         if (buttons[i].show_option) {
             u32 option_colour = buttons[i].themed ?
                 (buttons[i].disabled ? menu_theme().disabled_text : menu_theme().option_text) : 0;
+            u32 option_flags = option_colour ? C2D_WithColor : 0;
+            float option_x = buttons[i].x + 88;
+            if (buttons == options_buttons && buttons[i].themed) {
+                MenuTheme theme = menu_theme();
+                C2D_DrawRectSolid(buttons[i].x + 96, buttons[i].y, 0, 88, buttons[i].h,
+                    buttons[i].disabled ? theme.panel_bg : theme.row_selected_bg);
+                option_flags |= C2D_AlignCenter;
+                option_x = buttons[i].x + 140;
+            } else {
+                option_flags |= C2D_AlignLeft;
+            }
             C2D_DrawText(buttons[i].option_texts[buttons[i].option],
-                option_colour ? C2D_AlignLeft | C2D_WithColor : C2D_AlignLeft,
-                buttons[i].x + 88, buttons[i].y, 0, 0.5, 0.5, option_colour);
+                option_flags, option_x, buttons[i].y, 0, 0.5, 0.5, option_colour);
         }
     }
     if (save_thread) C2D_DrawText(&text_saving, C2D_AlignLeft, 0, 224, 0, 0.5, 0.5);
