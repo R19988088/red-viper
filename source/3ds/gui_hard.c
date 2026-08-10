@@ -1087,11 +1087,12 @@ static bool rom_loader(char *message) {
     #undef DEFAULT_RETURN
     #define DEFAULT_RETURN false
 
+    MenuTheme menu_colours = menu_theme();
     LOOP_BEGIN(rom_loader_buttons, -1);
         // process rom list
         touchPosition touch_pos;
         hidTouchRead(&touch_pos);
-        if ((hidKeysDown() & KEY_TOUCH) && touch_pos.px >= 48) {
+        if ((hidKeysDown() & KEY_TOUCH) && touch_pos.px >= 120) {
             last_py = touch_pos.py;
             clicked_entry = floorf((touch_pos.py + scroll_pos) / entry_height);
             if (clicked_entry < 0 || clicked_entry >= entry_count)
@@ -1231,6 +1232,7 @@ static bool rom_loader(char *message) {
         }
 
         // draw
+        C2D_DrawRectSolid(120, 8, 0, 192, 224, menu_colours.panel_bg);
         C2D_TextBufClear(dynamic_textbuf);
         float y = -scroll_pos;
         C2D_Text path_text;
@@ -1239,30 +1241,31 @@ static bool rom_loader(char *message) {
             if (y + entry_height >= 0 && y < 240) {
                 C2D_TextParse(&path_text, dynamic_textbuf, i < dirCount ? dirs[i] : files[i - dirCount]);
                 C2D_TextOptimize(&path_text);
-                C2D_DrawRectSolid(56, y, 0, 264, entry_height, clicked_entry == i ? TINT_50 : TINT_100);
-                if (cursor == i) C2D_DrawRectSolid(56 + 4, y + entry_height - 8, 0, 264 - 8, 1, BLACK);
-                C2D_DrawText(&path_text, C2D_AlignLeft, 64, y + 8, 0, 0.5, 0.5);
+                C2D_DrawRectSolid(120, y, 0, 192, entry_height, clicked_entry == i ? menu_colours.row_selected_bg : menu_colours.panel_bg);
+                if (cursor == i) C2D_DrawRectSolid(124, y + entry_height - 8, 0, 184, 1, menu_colours.nav_selected_text);
+                C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, y + 8, 0, 0.5, 0.5,
+                    cursor == i ? menu_colours.row_selected_text : menu_colours.nav_text);
             }
             y += entry_height;
         }
         // scrollbar
         if (scroll_top != scroll_bottom) {
-            C2D_DrawRectSolid(320-2, 32, 0, 2, 240-32, BLACK);
-            C2D_DrawRectSolid(320-2, 32 + (240-32-8) * (scroll_pos - scroll_top) / (scroll_bottom - scroll_top), 0, 2, 8, TINT_COLOR);
+            C2D_DrawRectSolid(310, 32, 0, 2, 240-32, BLACK);
+            C2D_DrawRectSolid(310, 32 + (240-32-8) * (scroll_pos - scroll_top) / (scroll_bottom - scroll_top), 0, 2, 8, menu_colours.nav_selected_text);
         }
         // path
         C2D_TextParse(&path_text, dynamic_textbuf, path);
         C2D_TextOptimize(&path_text);
-        C2D_DrawRectSolid(0, 0, 0, 320, 32, BLACK);
+        C2D_DrawRectSolid(120, 8, 0, 192, 24, menu_colours.panel_bg);
 
         if (message) {
             C2D_Text message_text;
             C2D_TextParse(&message_text, dynamic_textbuf, message);
             C2D_TextOptimize(&message_text);
-            C2D_DrawText(&message_text, C2D_AlignLeft | C2D_WithColor, 48, 0, 0, 0.5, 0.5, TINT_COLOR);
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 48, 16, 0, 0.5, 0.5, TINT_COLOR);
+            C2D_DrawText(&message_text, C2D_AlignLeft | C2D_WithColor, 128, 8, 0, 0.5, 0.5, menu_colours.nav_selected_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, 16, 0, 0.4, 0.4, menu_colours.nav_text);
         } else {
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 48, 8, 0, 0.5, 0.5, TINT_COLOR);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, 8, 0, 0.4, 0.4, menu_colours.nav_text);
         }
 
         // up button indicator
