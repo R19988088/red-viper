@@ -89,7 +89,7 @@ int main(void) {
 
     replay_init();
 
-    toggleAnaglyph(tVBOpt.ANAGLYPH);
+    toggleAnaglyph(false);
 
     aptHookCookie cookie;
     aptHook(&cookie, aptBacklight, NULL);

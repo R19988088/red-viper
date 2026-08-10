@@ -452,6 +452,7 @@ int loadFileOptions(void) {
     int ret = ini_parse(CONFIG_FILENAME, handler, &tVBOpt);
     tVBOpt.MULTICOL = true;
     tVBOpt.MULTIID = colour_mode_normalize(tVBOpt.MULTIID);
+    tVBOpt.ANAGLYPH = false;
     if (!ret) tVBOpt.GAME_SETTINGS = false;
     tVBOpt.MODIFIED = false;
     buttons_on_screen = tVBOpt.TOUCH_BUTTONS;

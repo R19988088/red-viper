@@ -271,19 +271,19 @@ static void multiplayer_wait_for_peer(void);
 static bool rom_loader(char *message);
 static Button rom_loader_buttons[] = {
     #define ROM_LOADER_UP 0
-    {.str="上级", .up_action=true, .x=0, .y=0, .w=32, .h=32},
+    {.str="上一级", .up_action=true, .x=128, .y=8, .w=64, .h=24},
     #define ROM_LOADER_BACK 1
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void multiplayer_main(int initial_button, bool init_uds);
 static Button multiplayer_main_buttons[] = {
     #define MULTI_MAIN_HOST 0
-    {.str="创建主机", .x=16, .y=16, .w=288, .h=48},
+    {.str="创建主机", .x=128, .y=40, .w=176, .h=40, .themed=true, .transparent=true},
     #define MULTI_MAIN_JOIN 1
-    {.str="加入房间", .x=16, .y=80, .w=288, .h=48},
+    {.str="加入房间", .x=128, .y=96, .w=176, .h=40, .themed=true, .transparent=true},
     #define MULTI_MAIN_BACK 2
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void multiplayer_join(void);
@@ -296,7 +296,7 @@ static Button multiplayer_join_buttons[] = {
     #define MULTI_JOIN_REFRESH 4
     {.str="刷新", .x=320-68, .y=208, .w=68, .h=32},
     #define MULTI_JOIN_BACK 5
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void multiplayer_host(void);
@@ -355,7 +355,7 @@ static Button controls_buttons[] = {
     #define CONTROLS_CPP 4
     {.str="圆形摇杆 Pro", .x=60, .y=200, .w=130, .h=40},
     #define CONTROLS_BACK 5
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void cpp_options(int initial_button);
@@ -365,7 +365,7 @@ static Button cpp_options_buttons[] = {
     #define CPP_CALIBRATE 1
     {.str="校准圆形摇杆 Pro", .x=60, .y=80, .w=200, .h=48},
     #define CPP_BACK 2
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void draw_abxy(Button*);
@@ -380,7 +380,7 @@ static Button preset_controls_buttons[] = {
     #define PRESET_CONTROLS_DPAD_MODE 2
     {.str="3DS 方向键模式", .x=60, .y=144, .w=200, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_vb_lpad, &text_vb_rpad, &text_mirror_abxy}},
     #define PRESET_CONTROLS_BACK 3
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 #define DECLARE_DRAW_CUSTOM_3DS_BUTTON_FUNCTION(CUSTOM_3DS_BUTTON) static void draw_custom_3ds_##CUSTOM_3DS_BUTTON(Button*);
@@ -435,7 +435,7 @@ static Button custom_3ds_mappings_buttons[] = {
     #define CUSTOM_3DS_MAPPINGS_RESET 22
     {.str="重置", .x=268, .y=208, .w=52, .h=32},
     #define CUSTOM_3DS_MAPPINGS_BACK 23
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void custom_vb_mappings(int initial_button);
@@ -469,7 +469,7 @@ static Button custom_vb_mappings_buttons[] = {
     #define CUSTOM_VB_MAPPINGS_KEY_A 13
     {.str="\uE000", .x=186, .y=162, .w=76, .h=36, .draw_selected_rect=true},
     #define CUSTOM_VB_MAPPINGS_BACK 14
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
     #define CUSTOM_VB_MAPPINGS_MOD 15
     {.str="模式", .x=260, .y=200, .w=60, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_normal, &text_toggle, &text_turbo}},
 };
@@ -477,7 +477,7 @@ static Button custom_vb_mappings_buttons[] = {
 static void touchscreen_settings(void);
 static Button touchscreen_settings_buttons[] = {
     #define TOUCHSCREEN_BACK 0
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
     #define TOUCHSCREEN_RESET 1
     {.str="重置", .x=0, .y=0, .w=52, .h=24},
     #define TOUCHSCREEN_SWITCH 2
@@ -491,7 +491,7 @@ static Button options_buttons[] = {
     #define OPTIONS_COLOUR 0
     {.str="色彩模式", .x=120, .y=32, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_colour_mode_1, &text_colour_mode_2, &text_colour_mode_3}, .transparent=true, .themed=true},
     #define OPTIONS_3D 1
-    {.str="3D 模式", .x=120, .y=88, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_anaglyph}, .transparent=true, .themed=true},
+    {.str="3D 模式", .x=120, .y=88, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_anaglyph}, .transparent=true, .themed=true, .disabled=true},
     #define OPTIONS_SLIDER 2
     {.str="滑块模式", .x=120, .y=144, .w=184, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_nintendo_3ds, &text_vbipd}, .transparent=true, .themed=true},
     #define OPTIONS_BACK 3
@@ -517,7 +517,7 @@ static Button video_settings_buttons[] = {
     #define VIDEO_SLIDER 3
     {.str = "滑块模式", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_vbipd, .toggle_text_off=&text_nintendo_3ds},
     #define VIDEO_BACK 4
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void barrier_settings(int initial_button);
@@ -527,7 +527,7 @@ static Button barrier_settings_buttons[] = {
     #define BARRIER_DEFAULT_EYE 1
     {.str="默认视图", .x=16, .y=136, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_right, .toggle_text_off=&text_left},
     #define BARRIER_BACK 2
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static void anaglyph_settings(int initial_button);
@@ -567,7 +567,7 @@ static Button anaglyph_settings_buttons[] = {
     {.x=176, .y=16+24*7, .w=80, .h=20, .colour=0xFFFFFF},
 
     #define ANAGLYPH_BACK 16
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 
     #define ANAGLYPH_DEPTH_PLACEHOLDER 17
     {.x=240, .y=16, .w=1, .h=1, .hidden=true},
@@ -585,7 +585,7 @@ static Button dev_options_buttons[] = {
     #define PERF_N3DS 2
     {.str="N3DS 加速", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define PERF_BACK 3
-    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
+    {.str=NULL, .back_action=true, .hidden=true},
 };
 
 static bool areyousure(C2D_Text *message);
@@ -613,12 +613,12 @@ static Button sound_error_buttons[] = {
 
 static void about(void);
 static Button about_buttons[] = {
-    {.str=NULL, .back_action=true, .hidden=true, .x=160-48, .y=180, .w=48*2, .h=48},
+    {.str=NULL, .back_action=true, .x=160-48, .y=180, .w=48*2, .h=48},
 };
 
 static bool load_rom(char *rom_message);
 static Button load_rom_buttons[] = {
-    {.str="卸载并取消", .no_action=true, .x=160-80, .y=180, .w=80*2, .h=48},
+    {.str=NULL, .no_action=true, .hidden=true},
 };
 
 static void forwarder_error(int err);
@@ -687,6 +687,20 @@ static void style_main_menu(void) {
     }
 }
 
+static void draw_main_menu_shell(int active_item) {
+    MenuTheme theme = menu_theme();
+    C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+    for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
+        Button *button = &main_menu_buttons[i];
+        if (button->hidden) continue;
+        if (i == active_item)
+            C2D_DrawRectSolid(button->x, button->y, 0, button->w, button->h, theme.nav_selected_bg);
+        C2D_DrawText(&button->text, C2D_AlignCenter | C2D_WithColor,
+            button->x + button->w / 2, button->y + button->h / 2 - 10, 0, 0.7, 0.7,
+            i == active_item ? theme.nav_selected_text : theme.nav_text);
+    }
+}
+
 static void draw_main_menu_panel(void) {
     MenuTheme theme = menu_theme();
     C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
@@ -733,9 +747,10 @@ static void first_menu(int initial_button) {
         return;
     }
 
-    no_forwarder:
+no_forwarder:
     for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++)
         main_menu_buttons[i].hidden = true;
+    main_menu_buttons[MAIN_MENU_MULTI].disabled = true;
     style_main_menu();
     int menu_initial = initial_button < MAIN_MENU_LOAD_ROM ? MAIN_MENU_LOAD_ROM : initial_button;
     LOOP_BEGIN(main_menu_buttons, menu_initial);
@@ -769,6 +784,7 @@ static void game_menu(int initial_button) {
     for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++)
         main_menu_buttons[i].hidden = false;
     main_menu_buttons[MAIN_MENU_LOAD_ROM].hidden = tVBOpt.FORWARDER;
+    main_menu_buttons[MAIN_MENU_MULTI].disabled = false;
     style_main_menu();
     LOOP_BEGIN(main_menu_buttons, initial_button);
         draw_main_menu_panel();
@@ -777,9 +793,12 @@ static void game_menu(int initial_button) {
     if (!tVBOpt.FORWARDER && (hidKeysDown() & KEY_Y)) [[gnu::musttail]] return vblink();
     switch (button) {
         case MAIN_MENU_LOAD_ROM:
-            guiop = AKILL | VBRESET;
-            if (rom_loader(NULL)) return;
-            else [[gnu::musttail]] return main_menu(MAIN_MENU_LOAD_ROM);
+            if (rom_loader(NULL)) {
+                guiop = AKILL | VBRESET;
+                return;
+            }
+            guiop = 0;
+            [[gnu::musttail]] return main_menu(MAIN_MENU_LOAD_ROM);
         case MAIN_MENU_MULTI:
             [[gnu::musttail]] return multiplayer_main(0, true);
         case MAIN_MENU_OPTIONS:
@@ -1089,10 +1108,15 @@ static bool rom_loader(char *message) {
 
     MenuTheme menu_colours = menu_theme();
     LOOP_BEGIN(rom_loader_buttons, -1);
+        draw_main_menu_shell(MAIN_MENU_LOAD_ROM);
         // process rom list
         touchPosition touch_pos;
         hidTouchRead(&touch_pos);
-        if ((hidKeysDown() & KEY_TOUCH) && touch_pos.px >= 120) {
+        if ((hidKeysDown() & KEY_TOUCH) && touch_pos.px >= 120 &&
+            !(touch_pos.px >= rom_loader_buttons[ROM_LOADER_UP].x &&
+              touch_pos.px < rom_loader_buttons[ROM_LOADER_UP].x + rom_loader_buttons[ROM_LOADER_UP].w &&
+              touch_pos.py >= rom_loader_buttons[ROM_LOADER_UP].y &&
+              touch_pos.py < rom_loader_buttons[ROM_LOADER_UP].y + rom_loader_buttons[ROM_LOADER_UP].h)) {
             last_py = touch_pos.py;
             clicked_entry = floorf((touch_pos.py + scroll_pos) / entry_height);
             if (clicked_entry < 0 || clicked_entry >= entry_count)
@@ -1263,13 +1287,13 @@ static bool rom_loader(char *message) {
             C2D_TextParse(&message_text, dynamic_textbuf, message);
             C2D_TextOptimize(&message_text);
             C2D_DrawText(&message_text, C2D_AlignLeft | C2D_WithColor, 128, 8, 0, 0.5, 0.5, menu_colours.nav_selected_text);
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, 16, 0, 0.4, 0.4, menu_colours.nav_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 16, 0, 0.32, 0.32, menu_colours.nav_text);
         } else {
-            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 128, 8, 0, 0.4, 0.4, menu_colours.nav_text);
+            C2D_DrawText(&path_text, C2D_AlignLeft | C2D_WithColor, 200, 8, 0, 0.32, 0.32, menu_colours.nav_text);
         }
 
         // up button indicator
-        C2D_DrawText(&text_btn_X, C2D_AlignLeft | C2D_WithColor, 8, 32, 0, 0.7, 0.7, TINT_COLOR);
+        C2D_DrawText(&text_btn_X, C2D_AlignLeft | C2D_WithColor, 128, 36, 0, 0.55, 0.55, menu_colours.nav_selected_text);
     LOOP_END(rom_loader_buttons);
 
     #undef DEFAULT_RETURN
@@ -1346,7 +1370,16 @@ static void multiplayer_main(int initial_button, bool init_uds) {
     }
     menu_start:
     LOOP_BEGIN(multiplayer_main_buttons, initial_button);
-        C2D_DrawText(&text_multi_reset_on_join, C2D_AlignCenter | C2D_WithColor, 320 / 2, 140, 0, 0.7, 0.7, TINT_COLOR);
+        style_main_menu();
+        draw_main_menu_shell(MAIN_MENU_MULTI);
+        for (int i = MULTI_MAIN_HOST; i <= MULTI_MAIN_JOIN; i++) {
+            multiplayer_main_buttons[i].themed = true;
+            multiplayer_main_buttons[i].transparent = true;
+            multiplayer_main_buttons[i].text_colour = menu_theme().nav_text;
+            multiplayer_main_buttons[i].selected_colour = menu_theme().nav_selected_bg;
+            multiplayer_main_buttons[i].selected_text_colour = menu_theme().nav_selected_text;
+        }
+        C2D_DrawText(&text_multi_reset_on_join, C2D_AlignCenter | C2D_WithColor, 216, 156, 0, 0.45, 0.45, TINT_COLOR);
     LOOP_END(multiplayer_main_buttons);
     switch (button) {
         case MULTI_MAIN_HOST:
@@ -2492,8 +2525,12 @@ static void dev_options(int initial_button) {
 
 static void save_debug_info(void) __attribute__((unused));
 static void options(int initial_button) {
+    if (tVBOpt.ANAGLYPH) {
+        toggleAnaglyph(false);
+        saveFileOptions();
+    }
     options_buttons[OPTIONS_COLOUR].option = colour_mode_normalize(tVBOpt.MULTIID);
-    options_buttons[OPTIONS_3D].option = tVBOpt.ANAGLYPH ? 1 : 0;
+    options_buttons[OPTIONS_3D].option = 0;
     options_buttons[OPTIONS_SLIDER].option = tVBOpt.SLIDERMODE ? 1 : 0;
     MenuTheme theme = menu_theme();
     for (int i = 0; i < 3; i++) {
@@ -2502,7 +2539,7 @@ static void options(int initial_button) {
         options_buttons[i].selected_text_colour = theme.nav_selected_text;
     }
     LOOP_BEGIN(options_buttons, initial_button);
-        C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
+        draw_main_menu_shell(MAIN_MENU_OPTIONS);
         if (hidKeysDown() & KEY_B) loop = false;
     LOOP_END(options_buttons);
     switch (button) {
@@ -2510,10 +2547,6 @@ static void options(int initial_button) {
             tVBOpt.MULTIID = (tVBOpt.MULTIID + 1) % COLOUR_MODE_COUNT;
             saveFileOptions();
             [[gnu::musttail]] return options(OPTIONS_COLOUR);
-        case OPTIONS_3D:
-            toggleAnaglyph(!tVBOpt.ANAGLYPH);
-            saveFileOptions();
-            [[gnu::musttail]] return options(OPTIONS_3D);
         case OPTIONS_SLIDER:
             tVBOpt.SLIDERMODE = !tVBOpt.SLIDERMODE;
             saveFileOptions();
@@ -2685,6 +2718,7 @@ static void savestate_menu(int initial_button, int selected_state) {
     }
 
     LOOP_BEGIN(savestate_buttons, initial_button == SAVESTATE_BACK ? SAVE_SAVESTATE : initial_button);
+        draw_main_menu_shell(MAIN_MENU_SAVESTATES);
         int keys_down = hidKeysDown();
         if (keys_down & KEY_UP) selected_state = selected_state == 0 ? 9 : selected_state - 1;
         if (keys_down & KEY_DOWN) selected_state = selected_state == 9 ? 0 : selected_state + 1;
@@ -2747,12 +2781,13 @@ static void savestate_menu(int initial_button, int selected_state) {
 }
 
 static void about(void) {
-    C2D_SpriteSetPos(&logo_sprite, 320 / 2, 36);
+    C2D_SpriteSetPos(&logo_sprite, 216, 28);
     C2D_ImageTint tint;
     C2D_PlainImageTint(&tint, C2D_Color32(255, 0, 0, 255), 1);
     LOOP_BEGIN(about_buttons, 0);
+        draw_main_menu_shell(MAIN_MENU_ABOUT);
         C2D_DrawSpriteTinted(&logo_sprite, &tint);
-        C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor, 320 / 2, 80, 0, 0.5, 0.5, TINT_COLOR);
+        C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor, 216, 62, 0, 0.35, 0.35, TINT_COLOR);
     LOOP_END(about_buttons);
     return;
 }
