@@ -576,7 +576,7 @@ static Button anaglyph_settings_buttons[] = {
 static void vblink(void);
 static Button vblink_buttons[] = {};
 
-static void dev_options(int initial_button);
+static void dev_options(int initial_button) __attribute__((unused));
 static Button dev_options_buttons[] = {
     #define PERF_BAR 0
     {.str="性能栏", .x=16, .y=16, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
@@ -737,7 +737,8 @@ static void first_menu(int initial_button) {
     for (int i = MAIN_MENU_RESUME; i <= MAIN_MENU_SAVESTATES; i++)
         main_menu_buttons[i].hidden = true;
     style_main_menu();
-    LOOP_BEGIN(main_menu_buttons, initial_button < MAIN_MENU_LOAD_ROM ? MAIN_MENU_LOAD_ROM : initial_button);
+    int menu_initial = initial_button < MAIN_MENU_LOAD_ROM ? MAIN_MENU_LOAD_ROM : initial_button;
+    LOOP_BEGIN(main_menu_buttons, menu_initial);
         draw_logo();
         draw_main_menu_panel();
         if (hidKeysDown() & KEY_Y) loop = false;
@@ -799,15 +800,17 @@ static void game_menu(int initial_button) {
                 return;
             }
         case MAIN_MENU_RESET:
-            for (int i = 0; i < 2; i++) {
-                C2D_TargetClear(screenTargetHard[i], 0);
-                C2D_TargetClear(finalScreen[i], 0);
+            {
+                for (int i = 0; i < 2; i++) {
+                    C2D_TargetClear(screenTargetHard[i], 0);
+                    C2D_TargetClear(finalScreen[i], 0);
+                }
+                C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+                video_flush(true);
+                C3D_FrameEnd(0);
+                guiop = AKILL | VBRESET;
+                return;
             }
-            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-            video_flush(true);
-            C3D_FrameEnd(0);
-            guiop = AKILL | VBRESET;
-            return;
         case MAIN_MENU_SAVESTATES:
             [[gnu::musttail]] return savestate_menu(0, last_savestate);
     }
@@ -2484,7 +2487,7 @@ static void dev_options(int initial_button) {
     }
 }
 
-static void save_debug_info(void);
+static void save_debug_info(void) __attribute__((unused));
 static void options(int initial_button) {
     options_buttons[OPTIONS_COLOUR].option = colour_mode_normalize(tVBOpt.MULTIID);
     options_buttons[OPTIONS_3D].option = tVBOpt.ANAGLYPH ? 1 : 0;
@@ -2729,12 +2732,14 @@ static void savestate_menu(int initial_button, int selected_state) {
                 snprintf(status, sizeof(status), "已保存到 %02d", selected_state + 1);
             [[gnu::musttail]] return savestate_menu(SAVE_SAVESTATE, selected_state);
         case LOAD_SAVESTATE:
-            if (emulation_lstate(selected_state) != 0) {
-                snprintf(status, sizeof(status), "加载失败");
-                [[gnu::musttail]] return savestate_menu(LOAD_SAVESTATE, selected_state);
+            {
+                if (emulation_lstate(selected_state) != 0) {
+                    snprintf(status, sizeof(status), "加载失败");
+                    [[gnu::musttail]] return savestate_menu(LOAD_SAVESTATE, selected_state);
+                }
+                guiop = 0;
+                return;
             }
-            guiop = 0;
-            return;
     }
 }
 
