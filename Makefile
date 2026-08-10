@@ -201,7 +201,7 @@ release release-3ds testing debug slowdebug:
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(TARGET).cia $(TARGET).3ds
+	@rm -fr $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(TARGET).cia $(TARGET).cci
 
 
 #---------------------------------------------------------------------------------
@@ -220,7 +220,7 @@ ifeq ($(strip $(NO_SMDH)),)
 .PHONY: all
 all	:	$(OUTPUT).3dsx $(OUTPUT).smdh $(OUTPUT).cia
 endif
-3ds	:	$(OUTPUT).3ds
+3ds	:	$(OUTPUT).cci
 $(OUTPUT).3dsx	:	$(OUTPUT).elf $(_3DSXDEPS)
 
 $(OFILES_SOURCES) : $(HFILES)
@@ -240,8 +240,8 @@ $(OUTPUT).cia: banner.bnr icon.icn cia.rsf $(OUTPUT).elf $(TOPDIR)/$(ROMFS)/*
 	$(MAKEROM) -f cia -o $(OUTPUT).cia -rsf cia.rsf -target t -exefslogo -elf $(OUTPUT).elf -icon icon.icn -banner banner.bnr -major ${VERSION_MAJOR} -minor ${VERSION_MINOR} -micro ${VERSION_MICRO}
 	@echo "built ... $(notdir $@)"
 
-$(OUTPUT).3ds: banner.bnr icon.icn cia.rsf $(OUTPUT).elf $(TOPDIR)/$(ROMFS)/*
-	$(MAKEROM) -f cci -o $(OUTPUT).3ds -rsf cia.rsf -target t -exefslogo -elf $(OUTPUT).elf -icon icon.icn -banner banner.bnr
+$(OUTPUT).cci: banner.bnr icon.icn cia.rsf $(OUTPUT).elf $(TOPDIR)/$(ROMFS)/*
+	$(MAKEROM) -f cci -o $(OUTPUT).cci -rsf cia.rsf -target t -exefslogo -elf $(OUTPUT).elf -icon icon.icn -banner banner.bnr
 	@echo "built ... $(notdir $@)"
 
 

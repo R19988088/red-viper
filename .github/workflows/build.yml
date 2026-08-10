@@ -41,11 +41,11 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Content-Type: application/octet-stream" \
-            --data-binary @red-viper.3ds \
-            "${upload_url}?name=red-viper.3ds"
-          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/red-viper.3ds"
+            --data-binary @red-viper.cci \
+            "${upload_url}?name=red-viper.cci"
+          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/red-viper.cci"
           {
             echo "## Red Viper 3DS Release"
             echo
-            echo "[Download red-viper.3ds](${download_url})"
+            echo "[Download red-viper.cci](${download_url})"
           } >> "$GITHUB_STEP_SUMMARY"

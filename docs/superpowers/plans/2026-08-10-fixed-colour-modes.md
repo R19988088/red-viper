@@ -227,10 +227,10 @@ cc -std=c11 -Wall -Wextra -Werror -Iinclude \
 ```bash
 make clean
 make release-3ds
-test -s red-viper.3ds
+test -s red-viper.cci
 ```
 
-预期：编译无 `-Werror` 错误，并生成非空 `red-viper.3ds`。若实现时当前分支尚未保留 `release-3ds` 目标，则用既有 `make release` 并验证 `red-viper.cia`/`red-viper.3dsx`，不为本功能改写 Makefile。
+预期：编译无 `-Werror` 错误，并生成非空 `red-viper.cci`。若实现时当前分支尚未保留 `release-3ds` 目标，则用既有 `make release` 并验证 `red-viper.cia`/`red-viper.3dsx`，不为本功能改写 Makefile。
 
 - [ ] **步骤 3：验证全局与游戏级配置往返**
 
