@@ -1,6 +1,12 @@
-on: [push, workflow_dispatch, pull_request]
+name: Build Red Viper 3DS Release
 
-name: Build Red Viper
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -11,40 +17,35 @@ jobs:
       - uses: actions/checkout@v6
         with:
           submodules: true
-      - name: build Red Viper
-        run: git config --global --add safe.directory $PWD && make release
-      - uses: actions/upload-artifact@v7
-        with:
-          name: red-viper.cia
-          path: red-viper.cia
-      - uses: actions/upload-artifact@v7
-        with:
-          name: red-viper.3dsx
-          path: red-viper.3dsx
-  
-  test_interpreter:
-    runs-on: ubuntu-latest
 
-    steps:
-      - name: Install dependencies
-        run: sudo apt update && sudo apt install libminizip-dev libsdl2-dev -y
-      - uses: actions/checkout@v6
-        with:
-          submodules: true
-      - name: build Red Viper
-        run: git config --global --add safe.directory $PWD && make -f Makefile.linux
-  
-  test_dynarec:
-    runs-on: ubuntu-latest
-    container: debian
+      - name: Build release CCI
+        run: git config --global --add safe.directory "$PWD" && make release-3ds
 
-    steps:
-      - name: Install dependencies
-        run: dpkg --add-architecture armhf && apt update && apt install zlib1g-dev:armhf libminizip-dev:armhf libsdl2-dev:armhf -y
-      - name: Install ARM toolchain
-        run: apt install git make gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf -y
-      - uses: actions/checkout@v6
-        with:
-          submodules: true
-      - name: build Red Viper
-        run: git config --global --add safe.directory $PWD && make -f Makefile.linux CC=arm-linux-gnueabihf-gcc CXX=arm-linux-gnueabihf-g++
+      - name: Publish direct 3DS download
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          tag="red-viper-build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          release_json="$(curl -fsSL \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" \
+            -d "{\"tag_name\":\"${tag}\",\"target_commitish\":\"${GITHUB_SHA}\",\"name\":\"Red Viper ${GITHUB_RUN_NUMBER}\",\"body\":\"Release build from GitHub Actions.\",\"draft\":false,\"prerelease\":true}")"
+          upload_url="$(printf '%s' "$release_json" | sed -n 's/.*"upload_url":[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/{?name,label}//')"
+          test -n "$upload_url"
+          curl -fsSL \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @red-viper.3ds \
+            "${upload_url}?name=red-viper.3ds"
+          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/red-viper.3ds"
+          {
+            echo "## Red Viper 3DS Release"
+            echo
+            echo "[Download red-viper.3ds](${download_url})"
+          } >> "$GITHUB_STEP_SUMMARY"

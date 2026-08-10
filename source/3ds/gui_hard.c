@@ -143,6 +143,7 @@ static inline int u16len(const u16 *s) {
 typedef struct Button_t Button;
 struct Button_t {
     char *str;
+    bool back_action, no_action, up_action;
     float x, y, w, h;
     bool show_toggle, toggle, show_option, hidden, draw_selected_rect;
     int option;
@@ -204,44 +205,44 @@ static void main_menu(int initial_button);
 
 static void first_menu(int initial_button);
 static Button first_menu_buttons[] = {
-    {.str="Load ROM", .x=16, .y=16, .w=288, .h=144},
-    {.str="Multi\nplayer", .x=0, .y=176, .w=80, .h=64},
-    {.str="Options", .x=240, .y=176, .w=80, .h=64},
-    {.str="Quit", .x=112, .y=192, .w=96, .h=48},
+    {.str="加载 ROM", .x=16, .y=16, .w=288, .h=144},
+    {.str="联机", .x=0, .y=176, .w=80, .h=64},
+    {.str="选项", .x=240, .y=176, .w=80, .h=64},
+    {.str="退出", .x=112, .y=192, .w=96, .h=48},
 };
 
 static void game_menu(int initial_button);
 static Button game_menu_buttons[] = {
     #define MAIN_MENU_LOAD_ROM 0
-    {.str="Load ROM", .x=232 - 16, .y=64, .w=80 + 16, .h=80},
+    {.str="加载 ROM", .x=232 - 16, .y=64, .w=80 + 16, .h=80},
     #define MAIN_MENU_MULTI 1
-    {.str="Multi\nplayer", .x=0, .y=176, .w=80, .h=64},
+    {.str="联机", .x=0, .y=176, .w=80, .h=64},
     #define MAIN_MENU_OPTIONS 2
-    {.str="Options", .x=240, .y=176, .w=80, .h=64},
+    {.str="选项", .x=240, .y=176, .w=80, .h=64},
     #define MAIN_MENU_QUIT 3
-    {.str="Quit", .x=112, .y=192, .w=96, .h=48},
+    {.str="退出", .x=112, .y=192, .w=96, .h=48},
     #define MAIN_MENU_RESUME 4
-    {.str="Resume", .x=0, .y=0, .w=320, .h=48},
+    {.str="继续游戏", .x=0, .y=0, .w=320, .h=48},
     #define MAIN_MENU_RESET 5
-    {.str="Reset", .x=8, .y=64, .w=80 + 16, .h=80},
+    {.str="重置", .x=8, .y=64, .w=80 + 16, .h=80},
     #define MAIN_MENU_SAVESTATES 6
-    {.str="Savestates", .x=112, .y=64, .w=80 + 16, .h=80},
+    {.str="存档", .x=112, .y=64, .w=80 + 16, .h=80},
 };
 
 static void multiplayer_menu(int initial_button);
 static Button multiplayer_menu_buttons[] = {
     #define MULTI_MENU_RESUME 0
-    {.str="Resume", .x=0, .y=0, .w=320, .h=48},
+    {.str="继续游戏", .x=0, .y=0, .w=320, .h=48},
     #define MULTI_MENU_BUFFER_MINUS 1
     {.str="-", .x=180, .y=100, .w=32, .h=32},
     #define MULTI_MENU_BUFFER_PLUS 2
     {.str="+", .x=180+64, .y=100, .w=32, .h=32},
     #define MULTI_MENU_RESET 3
-    {.str="Reset", .x=0, .y=176, .w=80, .h=64},
+    {.str="重置", .x=0, .y=176, .w=80, .h=64},
     #define MULTI_MENU_LEAVE 4
-    {.str="Leave", .x=112, .y=192, .w=96, .h=48},
+    {.str="离开", .x=112, .y=192, .w=96, .h=48},
     #define MULTI_MENU_OPTIONS 5
-    {.str="Options", .x=240, .y=176, .w=80, .h=64},
+    {.str="选项", .x=240, .y=176, .w=80, .h=64},
 };
 
 static void multiplayer_wait_for_peer(void);
@@ -249,19 +250,19 @@ static void multiplayer_wait_for_peer(void);
 static bool rom_loader(char *message);
 static Button rom_loader_buttons[] = {
     #define ROM_LOADER_UP 0
-    {.str="Up", .x=0, .y=0, .w=32, .h=32},
+    {.str="上级", .up_action=true, .x=0, .y=0, .w=32, .h=32},
     #define ROM_LOADER_BACK 1
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void multiplayer_main(int initial_button, bool init_uds);
 static Button multiplayer_main_buttons[] = {
     #define MULTI_MAIN_HOST 0
-    {.str="Host", .x=16, .y=16, .w=288, .h=48},
+    {.str="创建主机", .x=16, .y=16, .w=288, .h=48},
     #define MULTI_MAIN_JOIN 1
-    {.str="Join", .x=16, .y=80, .w=288, .h=48},
+    {.str="加入房间", .x=16, .y=80, .w=288, .h=48},
     #define MULTI_MAIN_BACK 2
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void multiplayer_join(void);
@@ -272,33 +273,33 @@ static Button multiplayer_join_buttons[] = {
     {.str="", .x=320/2-224/2, .y=4+50*3, .w=224, .h=48},
     #define MULTI_JOIN_COUNT 4
     #define MULTI_JOIN_REFRESH 4
-    {.str="Refresh", .x=320-68, .y=208, .w=68, .h=32},
+    {.str="刷新", .x=320-68, .y=208, .w=68, .h=32},
     #define MULTI_JOIN_BACK 5
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void multiplayer_host(void);
 static Button multiplayer_host_buttons[] = {
     #define MULTI_HOST_LEAVE 0
-    {.str = "Cancel", .x=0, .y=208, .w=64, .h=32},
+    {.str = "取消", .x=0, .y=208, .w=64, .h=32},
     #define MULTI_HOST_CHANGE 1
-    {.str = "Change ROM", .x=160-64, .y=180, .w=64*2, .h=48},
+    {.str = "更换 ROM", .x=160-64, .y=180, .w=64*2, .h=48},
 };
 
 static void multiplayer_prepare_join(int initial_button);
 static Button multiplayer_prepare_join_buttons[] = {
     #define MULTI_PREPARE_SD 0
-    {.str="Load from\nSD Card", .x=32, .y=140, .w=112, .h=52},
+    {.str="从 SD 卡\n加载", .x=32, .y=140, .w=112, .h=52},
     #define MULTI_PREPARE_DLPLAY 1
-    {.str="Download\nPlay", .x=176, .y=140, .w=112, .h=52},
+    {.str="下载\n游玩", .x=176, .y=140, .w=112, .h=52},
     #define MULTI_PREPARE_LEAVE 2
-    {.str="Leave", .x=0, .y=208, .w=56, .h=32},
+    {.str="离开", .x=0, .y=208, .w=56, .h=32},
 };
 
 static void multiplayer_dlplay(void);
 static Button multiplayer_dlplay_buttons[] = {
     #define MULTI_ROOM_LEAVE 0
-    {.str = "Cancel", .x=160-48, .y=180, .w=48*2, .h=48},
+    {.str = "取消", .x=160-48, .y=180, .w=48*2, .h=48},
 };
 
 static void multiplayer_sram_transfer(void);
@@ -306,44 +307,44 @@ static void multiplayer_sram_transfer(void);
 static void multiplayer_ready_room(bool is_host, int initial_button);
 static Button multiplayer_ready_room_buttons[] = {
     #define MULTI_READY_START 0
-    {.str = "Start", .x=160-48, .y=180, .w=48*2, .h=48},
+    {.str = "开始", .x=160-48, .y=180, .w=48*2, .h=48},
     #define MULTI_READY_BUFFER_MINUS 1
     {.str="-", .x=180, .y=140, .w=32, .h=32},
     #define MULTI_READY_BUFFER_PLUS 2
     {.str="+", .x=180+64, .y=140, .w=32, .h=32},
     #define MULTI_READY_LEAVE 3
-    {.str="Leave", .x=0, .y=208, .w=56, .h=32},
+    {.str="离开", .x=0, .y=208, .w=56, .h=32},
 };
 
 static void multiplayer_error(int err, C2D_Text *messsage, bool exit_to_menu);
 static Button multiplayer_error_buttons[] = {
-    {.str = "Exit", .x=160-48, .y=180, .w=48*2, .h=48},
+    {.str = "退出", .x=160-48, .y=180, .w=48*2, .h=48},
 };
 
 static void controls(int initial_button);
 static Button controls_buttons[] = {
     #define CONTROLS_CONTROL_SCHEME 0
-    {.str="Control Scheme", .x=60, .y=16, .w=200, .h=48, .show_toggle=true, .toggle_text_on=&text_custom, .toggle_text_off=&text_preset},
+    {.str="控制方案", .x=60, .y=16, .w=200, .h=48, .show_toggle=true, .toggle_text_on=&text_custom, .toggle_text_off=&text_preset},
     #define CONTROLS_CONFIGURE_SCHEME 1
-    {.str="Configure Scheme", .x=60, .y=80, .w=200, .h=48},
+    {.str="配置方案", .x=60, .y=80, .w=200, .h=48},
     #define CONTROLS_TOUCHSCREEN 2
-    {.str="Touchscreen settings", .x=60, .y=144, .w=200, .h=48},
+    {.str="触屏设置", .x=60, .y=144, .w=200, .h=48},
     #define CONTROLS_DISPLAY 3
-    {.str="Input display", .x=200, .y=200, .w=120, .h=40, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
+    {.str="输入显示", .x=200, .y=200, .w=120, .h=40, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define CONTROLS_CPP 4
-    {.str="Circle Pad Pro", .x=60, .y=200, .w=130, .h=40},
+    {.str="圆形摇杆 Pro", .x=60, .y=200, .w=130, .h=40},
     #define CONTROLS_BACK 5
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void cpp_options(int initial_button);
 static Button cpp_options_buttons[] = {
     #define CPP_TOGGLE 0
-    {.str = "CPP enabled", .x=60, .y=16, .w=200, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
+    {.str = "启用圆形摇杆 Pro", .x=60, .y=16, .w=200, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define CPP_CALIBRATE 1
-    {.str="Calibrate CPP", .x=60, .y=80, .w=200, .h=48},
+    {.str="校准圆形摇杆 Pro", .x=60, .y=80, .w=200, .h=48},
     #define CPP_BACK 2
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void draw_abxy(Button*);
@@ -356,9 +357,9 @@ static Button preset_controls_buttons[] = {
     #define PRESET_CONTROLS_SHOULDER 1
     {.x=160-64, .y=0, .w=128, .h=40, .custom_draw=draw_shoulders},
     #define PRESET_CONTROLS_DPAD_MODE 2
-    {.str="3DS D-Pad Mode", .x=60, .y=144, .w=200, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_vb_lpad, &text_vb_rpad, &text_mirror_abxy}},
+    {.str="3DS 方向键模式", .x=60, .y=144, .w=200, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_vb_lpad, &text_vb_rpad, &text_mirror_abxy}},
     #define PRESET_CONTROLS_BACK 3
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 #define DECLARE_DRAW_CUSTOM_3DS_BUTTON_FUNCTION(CUSTOM_3DS_BUTTON) static void draw_custom_3ds_##CUSTOM_3DS_BUTTON(Button*);
@@ -411,9 +412,9 @@ static Button custom_3ds_mappings_buttons[] = {
     #define CUSTOM_3DS_MAPPINGS_START 21
     {.x=162, .y=198, .w=50, .h=42, .draw_selected_rect=true, .custom_draw=draw_custom_3ds_START},
     #define CUSTOM_3DS_MAPPINGS_RESET 22
-    {.str="Reset", .x=268, .y=208, .w=52, .h=32},
+    {.str="重置", .x=268, .y=208, .w=52, .h=32},
     #define CUSTOM_3DS_MAPPINGS_BACK 23
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void custom_vb_mappings(int initial_button);
@@ -447,75 +448,75 @@ static Button custom_vb_mappings_buttons[] = {
     #define CUSTOM_VB_MAPPINGS_KEY_A 13
     {.str="\uE000", .x=186, .y=162, .w=76, .h=36, .draw_selected_rect=true},
     #define CUSTOM_VB_MAPPINGS_BACK 14
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
     #define CUSTOM_VB_MAPPINGS_MOD 15
-    {.str="Mod", .x=260, .y=200, .w=60, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_normal, &text_toggle, &text_turbo}},
+    {.str="模式", .x=260, .y=200, .w=60, .h=40, .show_option=true, .option_texts=(C2D_Text*[]){&text_normal, &text_toggle, &text_turbo}},
 };
 
 static void touchscreen_settings(void);
 static Button touchscreen_settings_buttons[] = {
     #define TOUCHSCREEN_BACK 0
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
     #define TOUCHSCREEN_RESET 1
-    {.str="Reset", .x=0, .y=0, .w=52, .h=24},
+    {.str="重置", .x=0, .y=0, .w=52, .h=24},
     #define TOUCHSCREEN_SWITCH 2
-    {.str="Toggle Switch", .x=0, .y=28, .w=128, .h=24},
+    {.str="切换开关", .x=0, .y=28, .w=128, .h=24},
     #define TOUCHSCREEN_DEFAULT 3
-    {.str="Make default", .x=0, .y=56, .w=110, .h=24},
+    {.str="设为默认", .x=0, .y=56, .w=110, .h=24},
 };
 
 static void options(int initial_button);
 static Button options_buttons[] = {
     #define OPTIONS_VIDEO 0
-    {.str="Video\nsettings", .x=16, .y=16, .w=96-8, .h=48},
+    {.str="视频\n设置", .x=16, .y=16, .w=96-8, .h=48},
     #define OPTIONS_CONTROLS 1
-    {.str="Controls", .x=112-2, .y=16, .w=96+4, .h=48},
+    {.str="控制", .x=112-2, .y=16, .w=96+4, .h=48},
     #define OPTIONS_SOUND 2
-    {.str="Sound", .x=208+8, .y=16, .w=96-8, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
+    {.str="声音", .x=208+8, .y=16, .w=96-8, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define OPTIONS_PERF 3
-    {.str="Perf.\nsettings", .x=16, .y=80, .w=96-8, .h=48},
+    {.str="性能\n设置", .x=16, .y=80, .w=96-8, .h=48},
     #define OPTIONS_FF 4
-    {.str="Fastforward", .x=112-2, .y=80, .w=96+4, .h=48, .show_toggle=true, .toggle_text_on=&text_toggle, .toggle_text_off=&text_hold},
+    {.str="快进", .x=112-2, .y=80, .w=96+4, .h=48, .show_toggle=true, .toggle_text_on=&text_toggle, .toggle_text_off=&text_hold},
     #define OPTIONS_ABOUT 5
-    {.str="About", .x=208+8, .y=80, .w=96-8, .h=48},
+    {.str="关于", .x=208+8, .y=80, .w=96-8, .h=48},
     #define OPTIONS_SAVE_GLOBAL 6
-    {.str="Save\n(Global)", .x=16, .y=144, .w=96-8, .h=48},
+    {.str="保存\n(全局)", .x=16, .y=144, .w=96-8, .h=48},
     #define OPTIONS_SAVE_GAME 7
-    {.str="Save\n(Game)", .x=112-2, .y=144, .w=96+4, .h=48},
+    {.str="保存\n(游戏)", .x=112-2, .y=144, .w=96+4, .h=48},
     #define OPTIONS_DISCARD 8
-    {.str="Discard", .x=208+8, .y=144, .w=96-8, .h=48},
+    {.str="放弃更改", .x=208+8, .y=144, .w=96-8, .h=48},
     #define OPTIONS_RESET_TO_GLOBAL 9
-    {.str="Restore\nGlobal", .y=144, .h=48},
+    {.str="恢复\n全局", .y=144, .h=48},
     #define OPTIONS_BACK  10
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
     #define OPTIONS_DEBUG 11
-    {.str="Save debug info", .x=170, .y=208, .w=150, .h=32},
+    {.str="保存调试信息", .x=170, .y=208, .w=150, .h=32},
 };
 
 static void video_settings(int initial_button);
 static Button video_settings_buttons[] = {
     #define VIDEO_MODE 0
-    {.str="3D mode", .x=16, .y=16, .w=128, .h=48, .show_toggle=true, .toggle_text_on=&text_anaglyph, .toggle_text_off=&text_nintendo_3ds},
+    {.str="3D 模式", .x=16, .y=16, .w=128, .h=48, .show_toggle=true, .toggle_text_on=&text_anaglyph, .toggle_text_off=&text_nintendo_3ds},
     #define VIDEO_SETTINGS 1
-    {.str="Settings", .x=176, .y=16, .w=128, .h=48},
+    {.str="设置", .x=176, .y=16, .w=128, .h=48},
     #define VIDEO_ANTIFLICKER 2
-    {.str="Antiflicker", .x=16, .y=80, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
+    {.str="抗闪烁", .x=16, .y=80, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define VIDEO_SLIDER 3
-    {.str = "Slider mode", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_vbipd, .toggle_text_off=&text_nintendo_3ds},
+    {.str = "滑块模式", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_vbipd, .toggle_text_off=&text_nintendo_3ds},
     #define VIDEO_BACK 4
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void barrier_settings(int initial_button);
 static Button barrier_settings_buttons[] = {
     #define BARRIER_MODE 0
-    {.str="Color mode", .x=16, .y=16, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_multicolor, .toggle_text_off=&text_monochrome},
+    {.str="色彩模式", .x=16, .y=16, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_multicolor, .toggle_text_off=&text_monochrome},
     #define BARRIER_SETTINGS 1
-    {.str="Color settings", .x=16, .y=80, .w=288, .h=48},
+    {.str="色彩设置", .x=16, .y=80, .w=288, .h=48},
     #define BARRIER_DEFAULT_EYE 2
-    {.str="Default eye", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_right, .toggle_text_off=&text_left},
+    {.str="默认视图", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_right, .toggle_text_off=&text_left},
     #define BARRIER_BACK 3
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void anaglyph_settings(int initial_button);
@@ -555,7 +556,7 @@ static Button anaglyph_settings_buttons[] = {
     {.x=176, .y=16+24*7, .w=80, .h=20, .colour=0xFFFFFF},
 
     #define ANAGLYPH_BACK 16
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 
     #define ANAGLYPH_DEPTH_PLACEHOLDER 17
     {.x=240, .y=16, .w=1, .h=1, .hidden=true},
@@ -564,46 +565,46 @@ static Button anaglyph_settings_buttons[] = {
 static void colour_filter(void);
 static Button colour_filter_buttons[] = {
     #define COLOUR_BACK 0
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
     #define COLOUR_RED 1
-    {.str="Red", .x=16, .y=64, .w=48, .h=32},
+    {.str="红色", .x=16, .y=64, .w=48, .h=32},
     #define COLOUR_GRAY 2
-    {.str="Gray", .x=16, .y=128, .w=48, .h=32},
+    {.str="灰度", .x=16, .y=128, .w=48, .h=32},
 };
 
 static void draw_multislot(Button*);
 static void multicolour_picker(int initial_button);
 static Button multicolour_picker_buttons[] = {
     {.x=16, .y=16, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="Edit", .x=224, .y=16, .w=80, .h=40},
+    {.str="编辑", .x=224, .y=16, .w=80, .h=40},
     {.x=16, .y=16+48, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="Edit", .x=224, .y=16+48, .w=80, .h=40},
+    {.str="编辑", .x=224, .y=16+48, .w=80, .h=40},
     {.x=16, .y=16+48*2, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="Edit", .x=224, .y=16+48*2, .w=80, .h=40},
+    {.str="编辑", .x=224, .y=16+48*2, .w=80, .h=40},
     {.x=16, .y=16+48*3, .w=200, .h=40, .custom_draw=draw_multislot},
-    {.str="Edit", .x=224, .y=16+48*3, .w=80, .h=40},
+    {.str="编辑", .x=224, .y=16+48*3, .w=80, .h=40},
     #define MULTIPICKER_BACK 8
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void multicolour_settings(int palette_id, int initial_button);
 static Button multicolour_settings_buttons[] = {
     #define MULTI_BLACK 0
-    {.str="Darkest", .x=16, .y=16, .w=170, .h=40},
+    {.str="最暗", .x=16, .y=16, .w=170, .h=40},
     #define MULTI_BRTA
-    {.str="Dark", .x=16, .y=16+48, .w=170, .h=40},
+    {.str="暗", .x=16, .y=16+48, .w=170, .h=40},
     #define MULTI_BRTB
-    {.str="Light", .x=16, .y=16+48*2, .w=170, .h=40},
+    {.str="亮", .x=16, .y=16+48*2, .w=170, .h=40},
     #define MULTI_BRTC
-    {.str="Lightest", .x=16, .y=16+48*3, .w=170, .h=40},
+    {.str="最亮", .x=16, .y=16+48*3, .w=170, .h=40},
     #define MULTI_BACK 4
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static void multicolour_wheel(int palette_id, int colour_id);
 static Button multicolour_wheel_buttons[] = {
     #define MULTIWHEEL_BACK 0
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
     #define MULTIWHEEL_HEX 1
     {.str="", .x=100, .y=212, .w=100, .h=28},
     #define MULTIWHEEL_SCALE 2
@@ -616,33 +617,33 @@ static Button vblink_buttons[] = {};
 static void dev_options(int initial_button);
 static Button dev_options_buttons[] = {
     #define PERF_BAR 0
-    {.str="Status bar", .x=16, .y=16, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
+    {.str="性能栏", .x=16, .y=16, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define PERF_VIP 1
-    {.str="Overclock VIP", .x=16, .y=80, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
+    {.str="VIP 超频", .x=16, .y=80, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define PERF_N3DS 2
-    {.str="N3DS speedup", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
+    {.str="N3DS 加速", .x=16, .y=80+64, .w=288, .h=48, .show_toggle=true, .toggle_text_on=&text_on, .toggle_text_off=&text_off},
     #define PERF_BACK 3
-    {.str="Back", .x=0, .y=208, .w=48, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=48, .h=32},
 };
 
 static bool areyousure(C2D_Text *message);
 static Button areyousure_buttons[] = {
     #define AREYOUSURE_YES 0
-    {.str="Yes", .x=160-48-32, .y=180, .w=64, .h=48},
+    {.str="是", .x=160-48-32, .y=180, .w=64, .h=48},
     #define AREYOUSURE_NO 1
-    {.str="No", .x=160+32, .y=180, .w=64, .h=48},
+    {.str="否", .no_action=true, .x=160+32, .y=180, .w=64, .h=48},
 };
 
 static void savestate_menu(int initial_button, int selected_state);
 static Button savestate_buttons[] = {
     #define SAVESTATE_BACK 0
-    {.str="Back", .x=0, .y=208, .w=60, .h=32},
+    {.str="返回", .back_action=true, .x=0, .y=208, .w=60, .h=32},
     #define SAVE_SAVESTATE 1
-    {.str="Save", .x=80, .y=170, .w=70, .h=70},
+    {.str="保存", .x=80, .y=170, .w=70, .h=70},
     #define LOAD_SAVESTATE 2
-    {.str="Load", .x=320 - 150, .y=170, .w=70, .h=70},
+    {.str="加载", .x=320 - 150, .y=170, .w=70, .h=70},
     #define DELETE_SAVESTATE 3
-    {.str="Delete", .x=260, .y=208, .w=60, .h=32},
+    {.str="删除", .x=260, .y=208, .w=60, .h=32},
     #define PREV_SAVESTATE 4
     {.str="<\n\uE004", .x=16, .y=60, .w=40, .h=100},
     #define NEXT_SAVESTATE 5
@@ -651,28 +652,28 @@ static Button savestate_buttons[] = {
 
 static void savestate_confirm(char *message, int last_button, int selected_state);
 static Button savestate_confirm_buttons[] = {
-    {.str="Return to game", .x=160-96, .y=140, .w=96*2, .h=48},
-    {.str="Return to menu", .x=160-96, .y=190, .w=96*2, .h=48},
+    {.str="返回游戏", .x=160-96, .y=140, .w=96*2, .h=48},
+    {.str="返回菜单", .x=160-96, .y=190, .w=96*2, .h=48},
 };
 
 static void sound_error(void);
 static Button sound_error_buttons[] = {
-    {.str="Continue without sound", .x=48, .y=130, .w=320-48*2, .h=32},
+    {.str="无声继续", .x=48, .y=130, .w=320-48*2, .h=32},
 };
 
 static void about(void);
 static Button about_buttons[] = {
-    {.str="Back", .x=160-48, .y=180, .w=48*2, .h=48},
+    {.str="返回", .back_action=true, .x=160-48, .y=180, .w=48*2, .h=48},
 };
 
 static bool load_rom(char *rom_message);
 static Button load_rom_buttons[] = {
-    {.str="Unload & cancel", .x=160-80, .y=180, .w=80*2, .h=48},
+    {.str="卸载并取消", .x=160-80, .y=180, .w=80*2, .h=48},
 };
 
 static void forwarder_error(int err);
 static Button forwarder_error_buttons[] = {
-    {.str = "Exit", .x=160-48, .y=180, .w=48*2, .h=48},
+    {.str = "退出", .x=160-48, .y=180, .w=48*2, .h=48},
 };
 
 #define SETUP_ALL_BUTTONS \
@@ -953,7 +954,7 @@ static void multiplayer_wait_for_peer(void) {
     udsGetNodeInformation(!my_player_id + 1, &peer_info);
     udsGetNodeInfoUsername(&peer_info, player_name);
     char message[32];
-    snprintf(message, sizeof(message), "%s paused the game.", player_name);
+    snprintf(message, sizeof(message), "%s 已暂停游戏。", player_name);
     C2D_Text text;
     C2D_TextBufClear(dynamic_textbuf);
     C2D_TextParse(&text, dynamic_textbuf, message);
@@ -1373,7 +1374,7 @@ static void multiplayer_main(int initial_button, bool init_uds) {
     LOOP_END(multiplayer_main_buttons);
     switch (button) {
         case MULTI_MAIN_HOST:
-            if (game_running || rom_loader("Pick a game to host.")) {
+            if (game_running || rom_loader("请选择要创建主机的游戏。")) {
                 res = create_network();
                 if (R_FAILED(res)) {
                     udsExit();
@@ -1472,7 +1473,7 @@ static void multiplayer_host() {
         C2D_DrawText(&version_text, C2D_AlignCenter | C2D_WithColor, 320 / 2, 150, 0, 0.5, 0.5, TINT_COLOR);
     LOOP_END(multiplayer_host_buttons);
     local_disconnect();
-    if (button == MULTI_HOST_CHANGE && rom_loader("Pick a game to host.") && game_running) {
+    if (button == MULTI_HOST_CHANGE && rom_loader("请选择要创建主机的游戏。") && game_running) {
         Result res = create_network();
         if (R_FAILED(res)) {
             udsExit();
@@ -1496,7 +1497,7 @@ static void multiplayer_forwarder_crc32_mismatch(NetAppData *appdata) {
 
     C2D_TextBufClear(dynamic_textbuf);
 
-    snprintf(buf, sizeof(buf), "Their game: %s", appdata->rom_name);
+    snprintf(buf, sizeof(buf), "对方游戏：%s", appdata->rom_name);
     C2D_TextParse(&their_game_text, dynamic_textbuf, buf);
     C2D_TextOptimize(&their_game_text);
 
@@ -1507,7 +1508,7 @@ static void multiplayer_forwarder_crc32_mismatch(NetAppData *appdata) {
     char *filename = strrchr(tVBOpt.ROM_PATH, '/');
     if (filename) filename++;
     else filename = tVBOpt.ROM_PATH;
-    snprintf(buf, sizeof(buf), "Your game: %s", filename);
+    snprintf(buf, sizeof(buf), "你的游戏：%s", filename);
     char *lastdot = strrchr(buf, '.');
     if (lastdot) *lastdot = 0;
     C2D_TextParse(&my_game_text, dynamic_textbuf, buf);
@@ -1531,7 +1532,7 @@ static void multiplayer_forwarder_crc32_mismatch(NetAppData *appdata) {
 
 static bool multiplayer_areyousure_version(char *their_version) {
     char buf[48];
-    snprintf(buf, sizeof(buf), "Their version: %s", their_version);
+    snprintf(buf, sizeof(buf), "对方版本：%s", their_version);
     C2D_Text their_version_text;
     C2D_TextBufClear(dynamic_textbuf);
     C2D_TextParse(&their_version_text, dynamic_textbuf, buf);
@@ -1571,7 +1572,7 @@ static void multiplayer_join() {
             udsGetNetworkStructApplicationData(&networks[i].network, &appdata, sizeof(appdata), &real_appdata_size);
             char *info_text;
             if (real_appdata_size != sizeof(appdata) || appdata.protocol_version != PROTOCOL_VERSION) {
-                info_text = "Version mismatch!";
+                info_text = "版本不一致！";
             } else {
                 // just in case
                 appdata.rom_name[sizeof(appdata.rom_name)-1] = 0;
@@ -1656,7 +1657,7 @@ static void multiplayer_prepare_join(int initial_button) {
 
     C2D_TextBufClear(dynamic_textbuf);
 
-    snprintf(buf, sizeof(buf), "Their game: %s", appdata.rom_name);
+    snprintf(buf, sizeof(buf), "对方游戏：%s", appdata.rom_name);
     C2D_TextParse(&their_game_text, dynamic_textbuf, buf);
     C2D_TextOptimize(&their_game_text);
 
@@ -1668,7 +1669,7 @@ static void multiplayer_prepare_join(int initial_button) {
         char *filename = strrchr(tVBOpt.ROM_PATH, '/');
         if (filename) filename++;
         else filename = tVBOpt.ROM_PATH;
-        snprintf(buf, sizeof(buf), "Your game: %s", filename);
+        snprintf(buf, sizeof(buf), "你的游戏：%s", filename);
         char *lastdot = strrchr(buf, '.');
         if (lastdot) *lastdot = 0;
         C2D_TextParse(&my_game_text, dynamic_textbuf, buf);
@@ -1706,7 +1707,7 @@ static void multiplayer_prepare_join(int initial_button) {
 
     switch (button) {
         case MULTI_PREPARE_SD:
-            snprintf(buf, sizeof(buf), "Please load: %s", appdata.rom_name);
+            snprintf(buf, sizeof(buf), "请加载：%s", appdata.rom_name);
             if (rom_loader(buf) && tVBOpt.CRC32 == appdata.rom_crc32) {
                 send_packet = new_packet_to_send();
                 send_packet->packet_type = PACKET_LOADED;
@@ -1814,7 +1815,7 @@ static void multiplayer_dlplay(void) {
 
         C2D_Text progress_text;
         char progress_buf[20];
-        snprintf(progress_buf, sizeof(progress_buf), "Progress: %5.2f%%", dlplay_progress * 100.0 / V810_ROM1.size);
+        snprintf(progress_buf, sizeof(progress_buf), "进度：%5.2f%%", dlplay_progress * 100.0 / V810_ROM1.size);
         C2D_TextParse(&progress_text, dynamic_textbuf, progress_buf);
         C2D_TextOptimize(&progress_text);
         C2D_DrawText(&progress_text, C2D_AlignLeft | C2D_WithColor, 320/2 - 80, 110, 0, 0.7, 0.7, TINT_COLOR);
@@ -1967,7 +1968,7 @@ static void multiplayer_ready_room(bool is_host, int initial_button) {
 static void multiplayer_error(int err, C2D_Text *message, bool exit_to_menu) {
     C2D_Text text;
     char code_message[32];
-    snprintf(code_message, sizeof(code_message), "Error code: %d", err);
+    snprintf(code_message, sizeof(code_message), "错误代码：%d", err);
     C2D_TextParse(&text, dynamic_textbuf, code_message);
     C2D_TextOptimize(&text);
     LOOP_BEGIN(multiplayer_error_buttons, 0);
@@ -2530,7 +2531,7 @@ static bool swkbd_colour(int *save_col) {
 static SwkbdCallbackResult swkbd_scale_callback(void *user, const char **message, const char *text, size_t text_len) {
     float scale = atoff(text);
     if (scale < 1 || scale > 4) {
-        *message = "Scale must be a number between 1.0 and 4.0.";
+        *message = "缩放比例必须在 1.0 到 4.0 之间。";
         return SWKBD_CALLBACK_CONTINUE;
     }
     return SWKBD_CALLBACK_OK;
@@ -2849,7 +2850,7 @@ static void vblink(void) {
         } else if (vblink_error) {
             snprintf(str, sizeof(str), "Listening at %d.%d.%d.%d...\nTransfer failed: error %d", ip_addr.bytes[0], ip_addr.bytes[1], ip_addr.bytes[2], ip_addr.bytes[3], vblink_error);
         } else {
-            snprintf(str, sizeof(str), "Listening at %d.%d.%d.%d...", ip_addr.bytes[0], ip_addr.bytes[1], ip_addr.bytes[2], ip_addr.bytes[3]);
+            snprintf(str, sizeof(str), "监听地址：%d.%d.%d.%d...", ip_addr.bytes[0], ip_addr.bytes[1], ip_addr.bytes[2], ip_addr.bytes[3]);
         }
         C2D_TextParse(&text, dynamic_textbuf, str);
         C2D_TextOptimize(&text);
@@ -2904,7 +2905,8 @@ static void save_debug_info(void);
 static void options(int initial_button) {
     options_buttons[OPTIONS_FF].toggle = tVBOpt.FF_TOGGLE;
     options_buttons[OPTIONS_SOUND].toggle = tVBOpt.SOUND;
-    options_buttons[OPTIONS_DEBUG].hidden = !game_running;
+    options_buttons[OPTIONS_PERF].hidden = DEBUGLEVEL == 0;
+    options_buttons[OPTIONS_DEBUG].hidden = DEBUGLEVEL == 0 || !game_running;
     options_buttons[OPTIONS_BACK].hidden = tVBOpt.MODIFIED;
     if (game_running) {
         if (tVBOpt.GAME_SETTINGS) {
@@ -3182,7 +3184,7 @@ static void savestate_confirm(char *message, int last_button, int selected_state
 
 static void savestate_menu(int initial_button, int selected_state) {
     char dynamic_text[32];
-    sprintf(dynamic_text, "State %d", selected_state);
+    sprintf(dynamic_text, "存档 %d", selected_state);
 
     C2D_Text selected_state_text;
     C2D_TextBufClear(dynamic_textbuf);
@@ -3196,7 +3198,7 @@ static void savestate_menu(int initial_button, int selected_state) {
         int state_shift = !!(keys_down & KEY_R) - !!(keys_down & KEY_L);
         if (state_shift != 0) {
             selected_state = (selected_state + 10 + state_shift) % 10;
-            sprintf(dynamic_text, "State %d", selected_state);
+            sprintf(dynamic_text, "存档 %d", selected_state);
             C2D_Text selected_state_text;
             C2D_TextBufClear(dynamic_textbuf);
             C2D_TextParse(&selected_state_text, dynamic_textbuf, dynamic_text);
@@ -3214,19 +3216,19 @@ static void savestate_menu(int initial_button, int selected_state) {
             [[gnu::musttail]] return main_menu(MAIN_MENU_SAVESTATES);
         case SAVE_SAVESTATE:
             if (emulation_sstate(selected_state) != 0) {
-                [[gnu::musttail]] return savestate_error("Could not save state", SAVE_SAVESTATE, selected_state);
+                [[gnu::musttail]] return savestate_error("保存存档失败", SAVE_SAVESTATE, selected_state);
             } else {
-                [[gnu::musttail]] return savestate_confirm("Save complete!", SAVE_SAVESTATE, selected_state);
+                [[gnu::musttail]] return savestate_confirm("存档已保存！", SAVE_SAVESTATE, selected_state);
             }
         case LOAD_SAVESTATE:
             if (emulation_lstate(selected_state) != 0) {
-                [[gnu::musttail]] return savestate_error("Could not load state", LOAD_SAVESTATE, selected_state);
+                [[gnu::musttail]] return savestate_error("加载存档失败", LOAD_SAVESTATE, selected_state);
             } else {
-                [[gnu::musttail]] return savestate_confirm("Load complete!", LOAD_SAVESTATE, selected_state);
+                [[gnu::musttail]] return savestate_confirm("存档已加载！", LOAD_SAVESTATE, selected_state);
             }
         case DELETE_SAVESTATE:
             if (emulation_rmstate(selected_state) != 0) {
-                [[gnu::musttail]] return savestate_error("Could not delete state", DELETE_SAVESTATE, selected_state);
+                [[gnu::musttail]] return savestate_error("删除存档失败", DELETE_SAVESTATE, selected_state);
             } else {
                 [[gnu::musttail]] return savestate_menu(SAVE_SAVESTATE, selected_state);
             }
@@ -3251,7 +3253,7 @@ static void about(void) {
 static bool load_error(int err, bool unloaded, char *rom_message) {
     C2D_Text text;
     char code_message[32];
-    snprintf(code_message, sizeof(code_message), "Error code: %d", err);
+    snprintf(code_message, sizeof(code_message), "错误代码：%d", err);
     C2D_TextParse(&text, dynamic_textbuf, code_message);
     C2D_TextOptimize(&text);
     #undef DEFAULT_RETURN
@@ -3271,7 +3273,7 @@ static bool load_error(int err, bool unloaded, char *rom_message) {
 static void forwarder_error(int err) {
     C2D_Text text;
     char code_message[32];
-    snprintf(code_message, sizeof(code_message), "Error code: %d", err);
+    snprintf(code_message, sizeof(code_message), "错误代码：%d", err);
     C2D_TextParse(&text, dynamic_textbuf, code_message);
     C2D_TextOptimize(&text);
     LOOP_BEGIN(forwarder_error_buttons, 0);
@@ -3446,16 +3448,13 @@ static inline int handle_buttons(Button buttons[], int count) {
             ret = i;
         }
 
-        // text-based checks, ignore when there is not text
-        if (!buttons[i].str) continue;
-
         // move back with the B button
-        if ((kDown & KEY_B) && (strcmp(buttons[i].str, "Back") == 0 || strcmp(buttons[i].str, "No") == 0)) {
+        if ((kDown & KEY_B) && (buttons[i].back_action || buttons[i].no_action)) {
             ret = i;
         }
 
         // move up a directory with X
-        if ((kDown & KEY_X) && strcmp(buttons[i].str, "Up") == 0) {
+        if ((kDown & KEY_X) && buttons[i].up_action) {
             ret = i;
         }
     }
@@ -3587,41 +3586,41 @@ void guiInit(void) {
     STATIC_TEXT(&text_btn_X, "\uE002")
     STATIC_TEXT(&text_btn_L, "\uE004")
     STATIC_TEXT(&text_btn_R, "\uE005")
-    STATIC_TEXT(&text_switch, "Switch")
-    STATIC_TEXT(&text_saving, "Saving...")
-    STATIC_TEXT(&text_on, "On")
-    STATIC_TEXT(&text_off, "Off")
-    STATIC_TEXT(&text_toggle, "Toggle")
-    STATIC_TEXT(&text_hold, "Hold")
+    STATIC_TEXT(&text_switch, "切换")
+    STATIC_TEXT(&text_saving, "保存中...")
+    STATIC_TEXT(&text_on, "开")
+    STATIC_TEXT(&text_off, "关")
+    STATIC_TEXT(&text_toggle, "切换")
+    STATIC_TEXT(&text_hold, "长按")
     STATIC_TEXT(&text_nintendo_3ds, "Nintendo 3DS")
     STATIC_TEXT(&text_vbipd, "Virtual Boy IPD")
-    STATIC_TEXT(&text_vb_lpad, "Virtual Boy Left D-Pad")
-    STATIC_TEXT(&text_vb_rpad, "Virtual Boy Right D-Pad")
-    STATIC_TEXT(&text_mirror_abxy, "Mirror ABXY Buttons")
+    STATIC_TEXT(&text_vb_lpad, "Virtual Boy 左方向键")
+    STATIC_TEXT(&text_vb_rpad, "Virtual Boy 右方向键")
+    STATIC_TEXT(&text_mirror_abxy, "镜像 ABXY 按键")
     STATIC_TEXT(&text_vblink, "VBLink")
-    STATIC_TEXT(&text_left, "Left")
-    STATIC_TEXT(&text_right, "Right")
-    STATIC_TEXT(&text_sound_error, "Error: couldn't initialize audio.\nDid you dump your DSP firmware?")
-    STATIC_TEXT(&text_debug_filenames, "Please share debug_info.txt and\ndebug_replay.bin.gz in your bug\nreport.")
-    STATIC_TEXT(&text_anykeyexit, "Press any key to exit")
-    STATIC_TEXT(&text_about, VERSION "\nBy Floogle, danielps, & others\nSplash screen by Morintari\nCustom control scheme by nevumx\nHeavily based on Reality Boy by David Tucker\nMore info at: github.com/skyfloogle/red-viper")
-    STATIC_TEXT(&text_loading, "Loading...")
-    STATIC_TEXT(&text_loaderr, "Failed to load ROM.")
-    STATIC_TEXT(&text_unloaded, "The current ROM has been unloaded.")
-    STATIC_TEXT(&text_yes, "Yes")
-    STATIC_TEXT(&text_no, "No")
-    STATIC_TEXT(&text_areyousure_reset, "Are you sure you want to reset?")
-    STATIC_TEXT(&text_areyousure_exit, "Are you sure you want to exit?")
-    STATIC_TEXT(&text_areyousure_leave, "Are you sure you want to\nexit multiplayer?")
-    STATIC_TEXT(&text_version_mismatch, "Your emulator version doesn't\nmatch the host's.\nThis can cause desyncs.")
-    STATIC_TEXT(&text_your_version, "Your version: " VERSION)
-    STATIC_TEXT(&text_connect_anyway, "Connect anyway?")
-    STATIC_TEXT(&text_protocol_mismatch, "Your emulator version doesn't\nmatch the host's.\nPlease ensure both are updated.\nYour version: " VERSION)
-    STATIC_TEXT(&text_savestate_menu, "Savestates")
-    STATIC_TEXT(&text_save, "Save")
-    STATIC_TEXT(&text_load, "Load")
-    STATIC_TEXT(&text_preset, "Preset")
-    STATIC_TEXT(&text_custom, "Custom")
+    STATIC_TEXT(&text_left, "左")
+    STATIC_TEXT(&text_right, "右")
+    STATIC_TEXT(&text_sound_error, "音频初始化失败。\n请确认 DSP 固件已导出。")
+    STATIC_TEXT(&text_debug_filenames, "请在问题报告中附上 debug_info.txt 和\ndebug_replay.bin.gz。")
+    STATIC_TEXT(&text_anykeyexit, "按任意键退出")
+    STATIC_TEXT(&text_about, VERSION "\n作者：Floogle、danielps 等\n启动画面：Morintari\n自定义控制方案：nevumx\n基于 David Tucker 的 Reality Boy\n更多信息：github.com/skyfloogle/red-viper")
+    STATIC_TEXT(&text_loading, "加载中...")
+    STATIC_TEXT(&text_loaderr, "ROM 加载失败。")
+    STATIC_TEXT(&text_unloaded, "当前 ROM 已卸载。")
+    STATIC_TEXT(&text_yes, "是")
+    STATIC_TEXT(&text_no, "否")
+    STATIC_TEXT(&text_areyousure_reset, "确定要重置吗？")
+    STATIC_TEXT(&text_areyousure_exit, "确定要退出吗？")
+    STATIC_TEXT(&text_areyousure_leave, "确定要退出\n联机吗？")
+    STATIC_TEXT(&text_version_mismatch, "模拟器版本与主机不一致。\n可能导致不同步。")
+    STATIC_TEXT(&text_your_version, "你的版本：" VERSION)
+    STATIC_TEXT(&text_connect_anyway, "仍要连接吗？")
+    STATIC_TEXT(&text_protocol_mismatch, "模拟器版本与主机不一致。\n请确保双方已更新。\n你的版本：" VERSION)
+    STATIC_TEXT(&text_savestate_menu, "存档")
+    STATIC_TEXT(&text_save, "保存")
+    STATIC_TEXT(&text_load, "加载")
+    STATIC_TEXT(&text_preset, "预设")
+    STATIC_TEXT(&text_custom, "自定义")
     STATIC_TEXT(&text_custom_3ds_button_DUP, "\uE079")
     STATIC_TEXT(&text_custom_3ds_button_DDOWN, "\uE07A")
     STATIC_TEXT(&text_custom_3ds_button_DLEFT, "\uE07B")
@@ -3658,34 +3657,34 @@ void guiInit(void) {
     STATIC_TEXT(&text_custom_vb_button_LPAD_L, "L\uE07B")
     STATIC_TEXT(&text_custom_vb_button_LPAD_D, "L\uE07A")
     STATIC_TEXT(&text_custom_vb_button_LPAD_U, "L\uE079")
-    STATIC_TEXT(&text_error, "Error")
+    STATIC_TEXT(&text_error, "错误")
     STATIC_TEXT(&text_3ds, "3DS")
     STATIC_TEXT(&text_vb, "VB")
     STATIC_TEXT(&text_map, "MAP")
-    STATIC_TEXT(&text_currently_mapped_to, "Currently\nmapped to:")
-    STATIC_TEXT(&text_normal, "Normal")
-    STATIC_TEXT(&text_turbo, "Turbo")
-    STATIC_TEXT(&text_current_default, "Current mode is default")
-    STATIC_TEXT(&text_anaglyph, "Anaglyph")
-    STATIC_TEXT(&text_depth, "Depth")
-    STATIC_TEXT(&text_cpp_on, "Circle Pad Pro connected.")
-    STATIC_TEXT(&text_cpp_off, "No Circle Pad Pro found.")
-    STATIC_TEXT(&text_monochrome, "Monochrome")
-    STATIC_TEXT(&text_multicolor, "Multicolor")
-    STATIC_TEXT(&text_brighten, "Brighten")
-    STATIC_TEXT(&text_brightness_disclaimer, "Actual brightness may vary by game.")
-    STATIC_TEXT(&text_multi_waiting, "Waiting for connection...")
-    STATIC_TEXT(&text_multi_preparing, "Peer is preparing...")
-    STATIC_TEXT(&text_downloading, "Downloading...")
-    STATIC_TEXT(&text_multi_init_error, "Could not start wireless.\nIs wireless enabled?")
-    STATIC_TEXT(&text_multi_disconnect, "Disconnected.")
-    STATIC_TEXT(&text_multi_comm_error, "Communication error.")
-    STATIC_TEXT(&text_multi_reset_on_join, "Game will reset when connecting.")
-    STATIC_TEXT(&text_input_buffer, "Input buffer:")
-    STATIC_TEXT(&text_multi_no_match, "Loaded game does not match.")
-    STATIC_TEXT(&text_multi_not_loaded, "No game is currently loaded.")
-    STATIC_TEXT(&text_dlplay_saving, "Note: Download Play will disable saving.")
-    STATIC_TEXT(&text_forwarder_nomatch, "Forwarders cannot join other games.")
+    STATIC_TEXT(&text_currently_mapped_to, "当前映射为：")
+    STATIC_TEXT(&text_normal, "普通")
+    STATIC_TEXT(&text_turbo, "加速")
+    STATIC_TEXT(&text_current_default, "当前模式为默认")
+    STATIC_TEXT(&text_anaglyph, "立体色差")
+    STATIC_TEXT(&text_depth, "深度")
+    STATIC_TEXT(&text_cpp_on, "已连接圆形摇杆 Pro。")
+    STATIC_TEXT(&text_cpp_off, "未检测到圆形摇杆 Pro。")
+    STATIC_TEXT(&text_monochrome, "单色")
+    STATIC_TEXT(&text_multicolor, "多色")
+    STATIC_TEXT(&text_brighten, "调亮")
+    STATIC_TEXT(&text_brightness_disclaimer, "亮度可能因游戏而异。")
+    STATIC_TEXT(&text_multi_waiting, "等待连接...")
+    STATIC_TEXT(&text_multi_preparing, "对方准备中...")
+    STATIC_TEXT(&text_downloading, "下载中...")
+    STATIC_TEXT(&text_multi_init_error, "无线功能启动失败。\n请确认无线功能已开启。")
+    STATIC_TEXT(&text_multi_disconnect, "已断开。")
+    STATIC_TEXT(&text_multi_comm_error, "通信错误。")
+    STATIC_TEXT(&text_multi_reset_on_join, "连接时游戏将重置。")
+    STATIC_TEXT(&text_input_buffer, "输入缓冲：")
+    STATIC_TEXT(&text_multi_no_match, "已加载的游戏不匹配。")
+    STATIC_TEXT(&text_multi_not_loaded, "当前未加载游戏。")
+    STATIC_TEXT(&text_dlplay_saving, "注意：下载游玩将禁用保存。")
+    STATIC_TEXT(&text_forwarder_nomatch, "Forwarder 不支持加入其他游戏。")
     SETUP_ALL_BUTTONS
 }
 

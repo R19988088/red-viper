@@ -184,23 +184,24 @@ ifneq ($(ROMFS),)
 	export _3DSXFLAGS += --romfs=$(CURDIR)/$(ROMFS)
 endif
 
-.PHONY: release testing debug slowdebug $(BUILD) clean all
+.PHONY: release release-3ds testing debug slowdebug $(BUILD) clean all
 
 #---------------------------------------------------------------------------------
 all: release
 release:	export EXTRA_CFLAGS := -O3 -DDEBUGLEVEL=0
+release-3ds:	export EXTRA_CFLAGS := -O3 -DDEBUGLEVEL=0
 testing:	export EXTRA_CFLAGS := -O3 -DDEBUGLEVEL=1
 debug:		export EXTRA_CFLAGS := -g -O0 -DDEBUGLEVEL=2
 slowdebug:	export EXTRA_CFLAGS := -g -O0 -DDEBUGLEVEL=3
 
-release testing debug slowdebug:
+release release-3ds testing debug slowdebug:
 	@mkdir -p $(BUILD) $(GFXBUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile $(if $(filter release-3ds,$@),3ds,all)
 
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(TARGET).cia
+	@rm -fr $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(TARGET).cia $(TARGET).3ds
 
 
 #---------------------------------------------------------------------------------
@@ -219,6 +220,7 @@ ifeq ($(strip $(NO_SMDH)),)
 .PHONY: all
 all	:	$(OUTPUT).3dsx $(OUTPUT).smdh $(OUTPUT).cia
 endif
+3ds	:	$(OUTPUT).3ds
 $(OUTPUT).3dsx	:	$(OUTPUT).elf $(_3DSXDEPS)
 
 $(OFILES_SOURCES) : $(HFILES)
@@ -236,6 +238,10 @@ cia.rsf:
 
 $(OUTPUT).cia: banner.bnr icon.icn cia.rsf $(OUTPUT).elf $(TOPDIR)/$(ROMFS)/*
 	$(MAKEROM) -f cia -o $(OUTPUT).cia -rsf cia.rsf -target t -exefslogo -elf $(OUTPUT).elf -icon icon.icn -banner banner.bnr -major ${VERSION_MAJOR} -minor ${VERSION_MINOR} -micro ${VERSION_MICRO}
+	@echo "built ... $(notdir $@)"
+
+$(OUTPUT).3ds: banner.bnr icon.icn cia.rsf $(OUTPUT).elf $(TOPDIR)/$(ROMFS)/*
+	$(MAKEROM) -f cci -o $(OUTPUT).3ds -rsf cia.rsf -target t -exefslogo -elf $(OUTPUT).elf -icon icon.icn -banner banner.bnr
 	@echo "built ... $(notdir $@)"
 
 
