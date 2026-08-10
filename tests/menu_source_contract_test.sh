@@ -45,4 +45,13 @@ if [ -n "$legacy" ]; then
     exit 1
 fi
 
+# The interactive options page owns its complete panel rendering.  The
+# generic button renderer must not draw a second copy of input-only labels.
+if ! grep -Eq \
+    'buttons\[i\]\.str && !buttons\[i\]\.input_only' "$source_file"; then
+    printf '%s\n' \
+        "menu source contract: input-only options still use the legacy label renderer" >&2
+    exit 1
+fi
+
 printf '%s\n' "menu source contract: passed ($source_file)"

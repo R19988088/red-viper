@@ -3132,7 +3132,7 @@ static inline int handle_buttons(Button buttons[], int count) {
         }
         if (buttons[i].custom_draw) {
             buttons[i].custom_draw(&buttons[i]);
-        } else if (buttons[i].str && !buttons[i].back_action && !buttons[i].no_action) {
+        } else if (buttons[i].str && !buttons[i].input_only && !buttons[i].back_action && !buttons[i].no_action) {
             int yoff = -10;
             char *strptr = buttons[i].str;
             while ((strptr = strchr(strptr, '\n'))) {
