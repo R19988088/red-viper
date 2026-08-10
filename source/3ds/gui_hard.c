@@ -288,6 +288,7 @@ static void multiplayer_wait_for_peer(void);
 
 static bool rom_loader(char *message);
 static bool rom_loader_impl(char *message, bool refresh);
+static const char *rom_display_path(const char *path);
 static Button rom_loader_buttons[] = {
     #define ROM_LOADER_UP 0
     {.str="上一级", .up_action=true, .x=128, .y=8, .w=64, .h=24, .text_scale=0.5f},
@@ -761,12 +762,82 @@ static void draw_main_menu_shell(int active_item) {
     }
 }
 
+static void draw_preview_text(const char *text, float x, float y, float scale, u32 colour) {
+    C2D_Text preview_text;
+    C2D_TextBufClear(dynamic_textbuf);
+    C2D_TextParse(&preview_text, dynamic_textbuf, text);
+    C2D_TextOptimize(&preview_text);
+    C2D_DrawText(&preview_text, C2D_AlignLeft | C2D_WithColor, x, y, 0, scale, scale, colour);
+}
+
+static void draw_main_menu_preview(int active_item, MenuTheme theme) {
+    switch (active_item) {
+        case MAIN_MENU_SAVESTATES:
+            for (int slot = 0; slot < 10; slot++) {
+                char row[32];
+                time_t mtime;
+                if (emulation_state_mtime(slot, &mtime)) {
+                    struct tm *local = localtime(&mtime);
+                    char time_text[24];
+                    if (local) strftime(time_text, sizeof(time_text), "%m-%d %H:%M", local);
+                    else strcpy(time_text, "--");
+                    snprintf(row, sizeof(row), "%02d  %s", slot + 1, time_text);
+                } else {
+                    snprintf(row, sizeof(row), "%02d  --", slot + 1);
+                }
+                if (slot == last_savestate)
+                    C2D_DrawRectSolid(128, 36 + slot * 15, 0, 176, 15, theme.row_selected_bg);
+                draw_preview_text(row, 136, 38 + slot * 15, 0.45,
+                    slot == last_savestate ? theme.row_selected_text : theme.nav_text);
+            }
+            break;
+        case MAIN_MENU_OPTIONS:
+            options_buttons[OPTIONS_COLOUR].option = colour_mode_normalize(tVBOpt.MULTIID);
+            options_buttons[OPTIONS_3D].option = 0;
+            options_buttons[OPTIONS_SLIDER].option = tVBOpt.SLIDERMODE ? 1 : 0;
+            options_buttons[OPTIONS_LANGUAGE].option = tVBOpt.LANGUAGE;
+            for (int i = OPTIONS_COLOUR; i <= OPTIONS_LANGUAGE; i++) {
+                Button *option = &options_buttons[i];
+                u32 label_colour = option->disabled ? theme.disabled_text : theme.nav_text;
+                u32 value_colour = option->disabled ? theme.disabled_text : theme.option_text;
+                C2D_DrawText(&option->text, C2D_AlignLeft | C2D_WithColor,
+                    136, 28 + i * 40, 0, 0.55, 0.55, label_colour);
+                C2D_DrawText(option->option_texts[option->option], C2D_AlignLeft | C2D_WithColor,
+                    224, 28 + i * 40, 0, 0.5, 0.5, value_colour);
+            }
+            break;
+        case MAIN_MENU_MULTI:
+            draw_preview_text("创建主机", 152, 52, 0.65, theme.nav_text);
+            draw_preview_text("加入房间", 152, 108, 0.65, theme.nav_text);
+            break;
+        case MAIN_MENU_ABOUT:
+            C2D_DrawSprite(&logo_sprite);
+            C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor,
+                216, 62, 0, 0.35, 0.35, theme.nav_text);
+            break;
+        case MAIN_MENU_LOAD_ROM:
+            draw_preview_text(rom_display_path(tVBOpt.ROM_PATH[0] ? tVBOpt.ROM_PATH : "sdmc:/"),
+                136, 48, 0.5, theme.nav_text);
+            break;
+        default:
+            break;
+    }
+}
+
 static void draw_main_menu_panel(void) {
     MenuTheme theme = menu_theme();
     C2D_DrawRectSolid(120, 8, 0, 192, 224, theme.panel_bg);
     if (selectedButton) {
         C2D_DrawText(&selectedButton->text, C2D_AlignCenter | C2D_WithColor,
             216, 24, 0, 0.65, 0.65, theme.nav_selected_text);
+        int active_item = -1;
+        for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
+            if (selectedButton == &main_menu_buttons[i]) {
+                active_item = i;
+                break;
+            }
+        }
+        if (active_item >= 0) draw_main_menu_preview(active_item, theme);
     }
 }
 
