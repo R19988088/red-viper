@@ -54,4 +54,11 @@ if ! grep -Eq \
     exit 1
 fi
 
+background_calls=$(grep -Ec 'draw_menu_background\(' "$source_file" || true)
+if [ "$background_calls" -ne 3 ]; then
+    printf '%s\n' \
+        "menu source contract: expected one full-screen background helper and two menu calls" >&2
+    exit 1
+fi
+
 printf '%s\n' "menu source contract: passed ($source_file)"

@@ -3,8 +3,11 @@
 #include "menu_panel_contract.h"
 
 int main(void) {
+    assert(MENU_SCREEN_W == 320);
+    assert(MENU_SCREEN_H == 240);
     assert(MENU_PANEL_X == 120);
     assert(MENU_PANEL_W == 200);
+    assert(MENU_PANEL_X + MENU_PANEL_W == MENU_SCREEN_W);
     assert(OPTIONS_LABEL_X == 128);
     assert(OPTIONS_VALUE_X == 216);
     assert(OPTIONS_VALUE_W == 88);

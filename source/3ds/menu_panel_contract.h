@@ -2,6 +2,8 @@
 #define MENU_PANEL_CONTRACT_H
 
 enum {
+    MENU_SCREEN_W = 320,
+    MENU_SCREEN_H = 240,
     MENU_PANEL_X = 120,
     MENU_PANEL_W = 200,
     OPTIONS_LABEL_X = 128,

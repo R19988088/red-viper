@@ -830,10 +830,14 @@ static bool refresh_rom_browser_current(void) {
     return refreshed;
 }
 
+static void draw_menu_background(const MenuPaletteSnapshot *palette) {
+    C2D_DrawRectSolid(0, 0, 0, MENU_SCREEN_W, MENU_SCREEN_H,
+        palette->shade[COLOUR_SHADE_BACKGROUND]);
+}
+
 static void draw_main_menu_shell(int active_item) {
     const MenuPaletteSnapshot *palette = &frame_palette;
-    C2D_DrawRectSolid(MENU_PANEL_X, 0, 0, MENU_PANEL_W, 240,
-        palette->shade[COLOUR_SHADE_BACKGROUND]);
+    draw_menu_background(palette);
     bool options_focus = active_item == MAIN_MENU_OPTIONS;
     for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
         Button *button = &main_menu_buttons[i];
@@ -964,8 +968,7 @@ static void draw_main_menu_preview(int active_item,
 }
 
 static void draw_main_menu_panel(void) {
-    MenuTheme theme = menu_theme_from_palette(&frame_palette);
-    C2D_DrawRectSolid(120, 0, 0, 200, 240, theme.panel_bg);
+    draw_menu_background(&frame_palette);
     if (selectedButton) {
         int active_item = -1;
         for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
