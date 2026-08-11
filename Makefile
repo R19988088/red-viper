@@ -71,7 +71,6 @@ CFLAGS	:=	-g -Wall -Wno-format-truncation -Werror -O3 -mword-relocations -Wswitc
 			-Wno-unused-variable \
 			-ffunction-sections \
 			-DVERSION=\"$(FULL_VERSION)\" \
-			-DMOD_VERSION=\"$(MOD_VERSION)\" \
 			$(ARCH)
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__ $(EXTRA_CFLAGS)
