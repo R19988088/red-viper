@@ -10,6 +10,7 @@ extern "C" {
 
 #include <assert.h>
 #include "vb_types.h"
+#include "stereo_depth.h"
 
 #ifdef __3DS__
 #include <citro3d.h>
@@ -175,6 +176,7 @@ extern VB_DSPCACHE tDSPCACHE;
 extern uint8_t maxRepeat;
 
 extern int eye_count;
+extern StereoDepthState video_stereo_depth;
 
 extern bool tileVisible[2048];
 extern int blankTile;

@@ -289,7 +289,7 @@ static void draw_affine_layer(int drawn_fb, avertex *vbufs[], C3D_Tex **textures
 	}
 }
 
-void gpu_draw_affine(WORLD *world, int umin, int vmin, int umax, int vmax, int drawn_fb, avertex *vbufs[], bool visible[]) {
+void gpu_draw_affine(WORLD *world, int gp, int umin, int vmin, int umax, int vmax, int drawn_fb, avertex *vbufs[], bool visible[]) {
 	uint8_t mapid = world->head & 0xf;
 	uint8_t scx_pow = ((world->head >> 10) & 3);
 	uint8_t scy_pow = ((world->head >> 8) & 3);
@@ -302,7 +302,6 @@ void gpu_draw_affine(WORLD *world, int umin, int vmin, int umax, int vmax, int d
 	mapid &= ~(map_count - 1);
 	bool over = world->head & 0x80;
 	int16_t base_gx = (s16)(world->gx << 6) >> 6;
-	int16_t gp = (s16)(world->gp << 6) >> 6;
 	int16_t gy = world->gy;
 	int16_t w = world->w + 1;
 	int16_t h = world->h + 1;
@@ -594,26 +593,29 @@ void gpu_draw_tiles(int first, int count) {
 
 extern bool any_2ds;
 
-static float getDepthOffset(bool default_for_both, int eye, bool full_parallax) {
+static int orig_eye = 0;
+
+static float getDepthOffset(bool default_for_both, int eye) {
 	if (tVBOpt.ANAGLYPH && any_2ds) {
 		int depth = tVBOpt.ANAGLYPH_DEPTH;
 		return (eye == 0) ? depth : -depth;
 	}
 
-    if (default_for_both || CONFIG_3D_SLIDERSTATE == 0) {
+    if (default_for_both || !video_stereo_depth.active) {
         return 0.0f;
     }
 
-    float directionFactor = (eye == 0) ? 1.0f : -1.0f;
+	if (tVBOpt.SLIDERMODE == SLIDER_3DS) return 0.0f;
 
-    if (!full_parallax) {
-		return directionFactor * CONFIG_3D_SLIDERSTATE * (MAX_DEPTH / 2);
-    } else {
-        return directionFactor * (CONFIG_3D_SLIDERSTATE * MAX_DEPTH) - (directionFactor * CENTER_OFFSET);
-    }
+	const float direction = (eye == 0) ? 1.0f : -1.0f;
+	return direction * (video_stereo_depth.slider * MAX_DEPTH - CENTER_OFFSET);
 }
 
-static int orig_eye = 0;
+static int sourceEye(bool default_for_both, int dst_eye) {
+	return default_for_both ? orig_eye
+		: (!tVBOpt.ANAGLYPH && !video_stereo_depth.active
+			? tVBOpt.DEFAULT_EYE : dst_eye);
+}
 
 static void video_flush_hard(bool default_for_both, int displayed_fb, int vip_displayed_fb) {
 	C3D_AttrInfo *attrInfo = C3D_GetAttrInfo();
@@ -715,11 +717,11 @@ static void video_flush_hard(bool default_for_both, int displayed_fb, int vip_di
 	int dst_eye_count = default_for_both ? 2 : eye_count;
 
 	for (int dst_eye = 0; dst_eye < dst_eye_count; dst_eye++) {
-		int src_eye = default_for_both ? orig_eye : !tVBOpt.ANAGLYPH && CONFIG_3D_SLIDERSTATE == 0 ? tVBOpt.DEFAULT_EYE : dst_eye;
+		int src_eye = sourceEye(default_for_both, dst_eye);
 		if (tVBOpt.ANAGLYPH) {
 			C3D_DepthTest(false, GPU_ALWAYS, (src_eye ? tVBOpt.ANAGLYPH_RIGHT : tVBOpt.ANAGLYPH_LEFT) | GPU_WRITE_ALPHA);
 		}
-		float depthOffset = getDepthOffset(default_for_both, dst_eye, tVBOpt.SLIDERMODE);
+		float depthOffset = getDepthOffset(default_for_both, dst_eye);
 		C3D_RenderTarget *target = finalScreen[dst_eye && !tVBOpt.ANAGLYPH];
 		C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0, 0);
 		C3D_FrameDrawOn(target);
@@ -762,8 +764,8 @@ static void video_flush_soft(bool default_for_both, int displayed_fb) {
 	size_t columnJump = (TOP_SCREEN_HEIGHT - VIEWPORT_HEIGHT);
 
 	for (int dst_eye = 0; dst_eye < (default_for_both ? 1 : eye_count); dst_eye++) {
-		int src_eye = default_for_both ? orig_eye : !tVBOpt.ANAGLYPH && CONFIG_3D_SLIDERSTATE == 0 ? tVBOpt.DEFAULT_EYE : dst_eye;
-		int depth_offset = (int)-getDepthOffset(default_for_both, dst_eye, tVBOpt.SLIDERMODE);
+		int src_eye = sourceEye(default_for_both, dst_eye);
+		int depth_offset = (int)-getDepthOffset(default_for_both, dst_eye);
 		memset(outbuf[dst_eye], 0, (viewportX + depth_offset) * 240 * 4);
 		u32 *outbuf_end = outbuf[dst_eye] + (400 * 240);
 		outbuf[dst_eye] += (viewportX + depth_offset) * (240);

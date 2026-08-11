@@ -60,7 +60,7 @@ void gpu_target_affine(int cache_id);
 void gpu_set_scissor(bool enabled, u32 left, u32 top, u32 right, u32 bottom);
 void gpu_set_opaque(bool opaque);
 void gpu_draw_tiles(int first, int count);
-void gpu_draw_affine(WORLD *world, int umin, int vmin, int umax, int vmax, int drawn_fb, avertex *vbufs[], bool visible[]);
+void gpu_draw_affine(WORLD *world, int gp, int umin, int vmin, int umax, int vmax, int drawn_fb, avertex *vbufs[], bool visible[]);
 void update_texture_cache_hard(void);
 void gpu_soft_to_texture(int displayed_fb);
 void gpu_blend_antiflicker(void);

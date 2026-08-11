@@ -190,9 +190,11 @@ void video_hard_render(int drawn_fb) {
 			bool over = worlds[wrld].is_over;
 			int16_t base_gx = (s16)(worlds[wrld].gx << 6) >> 6;
 			int16_t gp = (s16)(worlds[wrld].gp << 6) >> 6;
+			gp = stereo_depth_scale_symmetric(gp, video_stereo_depth.scale);
 			int16_t gy = worlds[wrld].gy;
 			int16_t base_mx = (s16)(worlds[wrld].mx << 3) >> 3;
 			int16_t mp = (s16)(worlds[wrld].mp << 1) >> 1;
+			mp = stereo_depth_scale_symmetric(mp, video_stereo_depth.scale);
 			int16_t my = (s16)(worlds[wrld].my << 3) >> 3;
 			int16_t w = worlds[wrld].w + 1;
 			int16_t h = worlds[wrld].h + 1;
@@ -346,9 +348,13 @@ void video_hard_render(int drawn_fb) {
 
 						// Account for hardware flaw that uses OR rather than adding
 						// when computing the address of HOFSTR.
-						u8 eye_offset = eye && !(param_base & 1);
+						const u8 right_offset = !(param_base & 1);
 						for (int y = 0; y < h; y++) {
-							s16 p = (s16)(params[y * 2 + eye_offset] << 3) >> 3;
+							const s16 native_left = (s16)(params[y * 2] << 3) >> 3;
+							const s16 native_right = (s16)(params[y * 2 + right_offset] << 3) >> 3;
+							const StereoDepthPair hofst = stereo_depth_scale_pair(
+								native_left, native_right, video_stereo_depth.scale);
+							s16 p = eye == 0 ? hofst.left : hofst.right;
 							avcur->x1 = gx;
 							avcur->y1 = gy + y + 256 * eye;
 							avcur->x2 = gx + w;
@@ -377,12 +383,22 @@ void video_hard_render(int drawn_fb) {
 							s16 my = params[y * 8 + 2];
 							s32 dx = params[y * 8 + 3];
 							s32 dy = params[y * 8 + 4];
+							int left_factor = mp < 0 ? -mp : 0;
+							int right_factor = mp >= 0 ? mp : 0;
+							StereoDepthPair u = stereo_depth_scale_pair(
+								mx + (left_factor * dx >> 6),
+								mx + (right_factor * dx >> 6),
+								video_stereo_depth.scale);
+							StereoDepthPair v = stereo_depth_scale_pair(
+								my + (left_factor * dy >> 6),
+								my + (right_factor * dy >> 6),
+								video_stereo_depth.scale);
 							avcur->x1 = gx;
 							avcur->y1 = gy + y + 256 * eye;
 							avcur->x2 = gx + w;
 							avcur->y2 = gy + y + 256 * eye;
-							avcur->u1 = avcur->u2 = mx + ((eye == 0) != (mp >= 0) ? abs(mp) * dx >> 6 : 0);
-							avcur->v1 = avcur->v2 = my + ((eye == 0) != (mp >= 0) ? abs(mp) * dy >> 6 : 0);
+							avcur->u1 = avcur->u2 = eye == 0 ? u.left : u.right;
+							avcur->v1 = avcur->v2 = eye == 0 ? v.left : v.right;
 							avcur->uoff1 = avcur->voff1 = 0;
 							avcur->uoff2 = (dx * w >> 6);
 							avcur->voff2 = (dy * w >> 6);
@@ -442,7 +458,7 @@ void video_hard_render(int drawn_fb) {
 				}
 
 				gpu_target_screen(drawn_fb);
-				gpu_draw_affine(&worlds[wrld], umin, vmin, umax, vmax, drawn_fb, vbufs, visible);
+				gpu_draw_affine(&worlds[wrld], gp, umin, vmin, umax, vmax, drawn_fb, vbufs, visible);
 			}
 			gpu_setup_tile_drawing();
 		} else {
@@ -468,6 +484,7 @@ void video_hard_render(int drawn_fb) {
 				short palette = (cw3 >> 14) | 4;
 
 				s16 jp = (s16)(cw1 << 6) >> 6;
+				jp = stereo_depth_scale_symmetric(jp, video_stereo_depth.scale);
 
 				for (int eye = start_eye; eye < end_eye; eye++) {
 					if (!(cw1 & (0x8000 >> eye)))

@@ -6,6 +6,7 @@
 VB_DSPCACHE tDSPCACHE; // Array of Display Cache info...
 
 int eye_count = 2;
+StereoDepthState video_stereo_depth = {1.0f, 1.0f, true};
 
 void video_init(void) {
     video_hard_init();
@@ -69,7 +70,12 @@ void video_render(int displayed_fb, bool on_time) {
 	AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 4);
 	AttrInfo_AddLoader(attrInfo, 2, GPU_UNSIGNED_BYTE, 4);
 
-	eye_count = tVBOpt.ANAGLYPH || tVBOpt.RENDERMODE == RM_TOCPU || CONFIG_3D_SLIDERSTATE > 0.0f ? 2 : 1;
+	const bool scale_native_depth =
+		!tVBOpt.ANAGLYPH && tVBOpt.SLIDERMODE == SLIDER_3DS;
+	video_stereo_depth = stereo_depth_make_state(
+		CONFIG_3D_SLIDERSTATE, scale_native_depth);
+	eye_count = (tVBOpt.ANAGLYPH || tVBOpt.RENDERMODE == RM_TOCPU ||
+		video_stereo_depth.active) ? 2 : 1;
     #endif
 
 	if (vb_state->tVIPREG.XPCTRL & XPEN) {

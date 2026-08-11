@@ -279,7 +279,7 @@ void gpu_draw_tiles(int first, int count) {
     glDrawArrays(GL_POINTS, first, count);
 }
 
-void gpu_draw_affine(WORLD *world, int umin, int vmin, int umax, int vmax, int drawn_fb, avertex *vbufs[], bool visible[]) {
+void gpu_draw_affine(WORLD *world, int gp, int umin, int vmin, int umax, int vmax, int drawn_fb, avertex *vbufs[], bool visible[]) {
 	uint8_t mapid = world->head & 0xf;
 	uint8_t scx_pow = ((world->head >> 10) & 3);
 	uint8_t scy_pow = ((world->head >> 8) & 3);
@@ -292,7 +292,6 @@ void gpu_draw_affine(WORLD *world, int umin, int vmin, int umax, int vmax, int d
 	mapid &= ~(map_count - 1);
 	bool over = world->head & 0x80;
 	int16_t base_gx = (s16)(world->gx << 6) >> 6;
-	int16_t gp = (s16)(world->gp << 6) >> 6;
 	int16_t gy = world->gy;
 	int16_t w = world->w + 1;
 	int16_t h = world->h + 1;

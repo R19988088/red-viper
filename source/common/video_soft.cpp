@@ -108,9 +108,11 @@ template<bool aligned, bool over> void render_normal_world(uint16_t *fb, WORLD *
     uint8_t scy = 1 << scy_pow;
     int16_t base_gx = (s16)(world->gx << 6) >> 6;
     int16_t gp = (s16)(world->gp << 6) >> 6;
+    gp = stereo_depth_scale_symmetric(gp, video_stereo_depth.scale);
     int16_t gy = world->gy;
     int16_t base_mx = (s16)(world->mx << 3) >> 3;
     int16_t mp = (s16)(world->mp << 1) >> 1;
+    mp = stereo_depth_scale_symmetric(mp, video_stereo_depth.scale);
     int16_t my = (s16)(world->my << 3) >> 3;
     int16_t w = world->w + 1;
     int16_t h = world->h + 1;
@@ -206,6 +208,7 @@ template<bool over> void render_affine_world(WORLD *world, int drawn_fb) {
     int scx_scy_mask = (scx - 1) | ((scy - 1) << 16);
     int16_t base_gx = (s16)(world->gx << 6) >> 6;
     int16_t gp = (s16)(world->gp << 6) >> 6;
+    gp = stereo_depth_scale_symmetric(gp, video_stereo_depth.scale);
     int16_t gy = world->gy;
     int16_t base_mx = (s16)(world->mx << 3) >> 3;
     int16_t mp = (s16)(world->mp << 1) >> 1;
@@ -227,18 +230,27 @@ template<bool over> void render_affine_world(WORLD *world, int drawn_fb) {
 
         uint16_t *fb = (uint16_t*)(vb_state->V810_DISPLAY_RAM.off + 0x10000 * eye + 0x8000 * drawn_fb);
 
-        int mx = base_mx + (eye == 0 ? -mp : mp);
         int gx = base_gx + (eye == 0 ? -gp : gp);
         for (int y = 0; likely(y < h); y++) {
             if (unlikely(gy + y < 0)) continue;
             if (unlikely(gy + y >= 224)) break;
-            int mx = params[y * 8 + 0] << 6;
-            s16 mp = params[y * 8 + 1];
-            int my = params[y * 8 + 2] << 6;
+            const int native_mx = params[y * 8 + 0] << 6;
+            const s16 mp = params[y * 8 + 1];
+            const int native_my = params[y * 8 + 2] << 6;
             s32 dx = params[y * 8 + 3];
             s32 dy = params[y * 8 + 4];
-            mx += (mp >= 0 ? mp * eye : -mp * !eye) * dx;
-            my += (mp >= 0 ? mp * eye : -mp * !eye) * dy;
+            const int left_factor = mp < 0 ? -mp : 0;
+            const int right_factor = mp >= 0 ? mp : 0;
+            const StereoDepthPair u = stereo_depth_scale_pair(
+                native_mx + left_factor * dx,
+                native_mx + right_factor * dx,
+                video_stereo_depth.scale);
+            const StereoDepthPair v = stereo_depth_scale_pair(
+                native_my + left_factor * dy,
+                native_my + right_factor * dy,
+                video_stereo_depth.scale);
+            int mx = eye == 0 ? u.left : u.right;
+            int my = eye == 0 ? v.left : v.right;
 
             int shift = (((gy + y) & 3) * 2);
 
@@ -317,6 +329,7 @@ void video_soft_render(int drawn_fb) {
         if (worlds[wrld].bgm != 3) {
             int16_t base_gx = (s16)(worlds[wrld].gx << 6) >> 6;
             int16_t gp = (s16)(worlds[wrld].gp << 6) >> 6;
+            gp = stereo_depth_scale_symmetric(gp, video_stereo_depth.scale);
             int16_t gy = worlds[wrld].gy;
             int16_t w = worlds[wrld].w + 1;
             int16_t h = worlds[wrld].h + 1;
@@ -394,6 +407,7 @@ void video_soft_render(int drawn_fb) {
                 short palette = (cw3 >> 14);
 
                 s16 jp = (s16)(cw1 << 6) >> 6;
+                jp = stereo_depth_scale_symmetric(jp, video_stereo_depth.scale);
 
                 for (int x = (base_x - abs(jp)) & ~7; x < base_x + abs(jp) && x < 384; x += 8) {
                     if (x < 0) continue;

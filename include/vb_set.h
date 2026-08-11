@@ -17,8 +17,8 @@
 #define PAL_RG      3
 #define PAL_RBG     4
 
-#define SLIDER_3DS  0
-#define SLIDER_VB   1
+#define SLIDER_3DS  0 // Scale native scene disparity.
+#define SLIDER_VB   1 // Legacy full-frame VB IPD offset.
 
 /* User interface language.  Keep Chinese as the zero/default value so
  * existing configuration files continue to select the original UI. */
@@ -83,7 +83,7 @@ typedef struct VB_OPT {
     int   FF_TOGGLE; // 0 - hold, 1 - toggle
     RENDERMODE_t RENDERMODE;
     bool  SOFT_FLUSH;
-    int   SLIDERMODE; // 0 - 3ds (positive parallax), 1 - virtual boy (full parallax)
+    int   SLIDERMODE; // 0 - native depth scale, 1 - legacy full-frame IPD offset
     int   LANGUAGE;   // UI language: Chinese, Japanese, or English
     int   DEFAULT_EYE; // 0 - left, 1 - right
     int   PAUSE_RIGHT; // right side of pause block on touch screen
