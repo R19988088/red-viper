@@ -2,6 +2,7 @@ VERSION_MAJOR := 1
 VERSION_MINOR := 3
 VERSION_MICRO := 2
 VERSION := v${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_MICRO}
+MOD_VERSION := ddd mod 1.1
 
 #---------------------------------------------------------------------------------
 .SUFFIXES:
@@ -64,12 +65,13 @@ ICON := icon.png
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
 GIT_HASH := $(shell git log -1 --pretty=format:"%h")
-FULL_VERSION := "$(VERSION) - $(GIT_HASH)"
+FULL_VERSION := "$(VERSION)"
 
 CFLAGS	:=	-g -Wall -Wno-format-truncation -Werror -O3 -mword-relocations -Wswitch \
 			-Wno-unused-variable \
 			-ffunction-sections \
 			-DVERSION=\"$(FULL_VERSION)\" \
+			-DMOD_VERSION=\"$(MOD_VERSION)\" \
 			$(ARCH)
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__ $(EXTRA_CFLAGS)

@@ -99,7 +99,6 @@ char * get_savestate_path(int state, bool write) {
     // $HOME/savestates/game
     char *sspath = (char *) malloc(MAX_PATH_LEN * sizeof(char));
     snprintf(sspath, MAX_PATH_LEN, "%s/%s", sshome, last_slash + 1);
-    int sspath_len = strlen(sspath);
     char *end = strrchr(sspath, '.');
     if (!end) end = sspath + strlen(sspath);
     if (end - sspath + 20 >= MAX_PATH_LEN) goto bail;
@@ -125,13 +124,54 @@ bool emulation_hasstate(int state) {
     return emulation_state_mtime(state, NULL);
 }
 
+static char *get_savestate_time_path(int state, bool write) {
+    char *path = get_savestate_path(state, write);
+    if (path == NULL) return NULL;
+    char *extension = strrchr(path, '.');
+    if (extension == NULL) {
+        free(path);
+        return NULL;
+    }
+    strcpy(extension, ".time");
+    return path;
+}
+
+bool emulation_state_time_write(int state, time_t timestamp) {
+    char *path = get_savestate_time_path(state, true);
+    if (path == NULL) return false;
+    FILE *time_file = fopen(path, "w");
+    free(path);
+    if (time_file == NULL) return false;
+    int result = fprintf(time_file, "%lld\n", (long long)timestamp) < 0;
+    if (fclose(time_file) != 0) result = 1;
+    return result == 0;
+}
+
 bool emulation_state_mtime(int state, time_t *mtime) {
-    char *sspath = get_savestate_path(state, false);
-    if (sspath == NULL) return false;
-    bool result = stat(sspath, &st) != -1;
-    if (result && mtime != NULL) *mtime = st.st_mtime;
-    free(sspath);
-    return result;
+    char *state_path = get_savestate_path(state, false);
+    if (state_path == NULL) return false;
+    struct stat state_stat;
+    bool state_exists = stat(state_path, &state_stat) != -1;
+    free(state_path);
+    if (!state_exists) return false;
+
+    char *time_path = get_savestate_time_path(state, false);
+    if (time_path != NULL) {
+        FILE *time_file = fopen(time_path, "r");
+        free(time_path);
+        if (time_file != NULL) {
+            long long saved_timestamp;
+            int parsed = fscanf(time_file, "%lld", &saved_timestamp);
+            fclose(time_file);
+            if (parsed == 1) {
+                if (mtime != NULL) *mtime = (time_t)saved_timestamp;
+                return true;
+            }
+        }
+    }
+
+    if (mtime != NULL) *mtime = state_stat.st_mtime;
+    return true;
 }
 
 int emulation_rmstate(int state) {
@@ -140,6 +180,12 @@ int emulation_rmstate(int state) {
 
     int result = remove(sspath);
     free(sspath);
+
+    char *time_path = get_savestate_time_path(state, false);
+    if (time_path != NULL) {
+        if (remove(time_path) != 0 && result == 0) result = 1;
+        free(time_path);
+    }
 
     return result;
 }
@@ -203,8 +249,8 @@ int emulation_sstate(int state) {
     #undef WRITE_VAR
     #undef FWRITE
 
-    fclose(state_file);
-    return 0;
+    if (fclose(state_file) != 0) return 1;
+    return emulation_state_time_write(state, time(NULL)) ? 0 : 1;
 
     bail:
     fclose(state_file);
@@ -212,8 +258,6 @@ int emulation_sstate(int state) {
 }
 
 int emulation_lstate(int state) {
-    int i;
-    int ret;
     uint32_t size;
     uint32_t id,ver,crc;
     FILE* state_file;

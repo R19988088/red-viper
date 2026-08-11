@@ -31,6 +31,7 @@ int emulation_resume(void);
 int emulation_reset(void);
 bool emulation_hasstate(int state);
 bool emulation_state_mtime(int state, time_t *mtime);
+bool emulation_state_time_write(int state, time_t timestamp);
 int emulation_rmstate(int state);
 int emulation_sstate(int state);
 int emulation_lstate(int state);

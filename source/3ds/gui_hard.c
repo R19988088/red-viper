@@ -34,6 +34,10 @@
 #include "menu_panel_contract.h"
 #include "rom_browser.h"
 
+#ifndef MOD_VERSION
+#define MOD_VERSION "ddd mod 1.1"
+#endif
+
 #define COLOR_R(COLOR) ( ((COLOR) & 0x000000FF) )
 #define COLOR_G(COLOR) ( ((COLOR) & 0x0000FF00) >> 8)
 #define COLOR_B(COLOR) ( ((COLOR) & 0x00FF0000) >> 16 )
@@ -756,15 +760,19 @@ static void draw_logo(void) {
 }
 
 static void style_main_menu(void) {
-    int y = 8;
+    int visible_count = 0;
+    for (int i = 0; i < LENGTH(main_menu_buttons); i++)
+        if (!main_menu_buttons[i].hidden) visible_count++;
+    int y = (MENU_SCREEN_H - visible_count * MAIN_MENU_ROW_H) / 2;
     for (int i = 0; i < LENGTH(main_menu_buttons); i++) {
         if (!main_menu_buttons[i].hidden) {
             main_menu_buttons[i].y = y;
-            y += 28;
+            y += MAIN_MENU_ROW_H;
         }
         main_menu_buttons[i].transparent = true;
         main_menu_buttons[i].themed = true;
         main_menu_buttons[i].left_aligned = true;
+        main_menu_buttons[i].text_scale = MAIN_MENU_TEXT_PERCENT / 100.0f;
         main_menu_buttons[i].colour = 0;
         main_menu_buttons[i].text_colour = 0;
         main_menu_buttons[i].selected_colour = 0;
@@ -780,9 +788,9 @@ static void refresh_savestate_cache(void) {
         savestate_cache.exists[slot] = emulation_state_mtime(slot, &mtime);
         savestate_cache.mtimes[slot] = savestate_cache.exists[slot] ? mtime : 0;
         if (savestate_cache.exists[slot]) {
-            struct tm *local = localtime(&mtime);
+            struct tm local;
             char time_text[24];
-            if (local) strftime(time_text, sizeof(time_text), "%m-%d %H:%M", local);
+            if (localtime_r(&mtime, &local)) strftime(time_text, sizeof(time_text), "%m-%d %H:%M", &local);
             else strcpy(time_text, "--");
             snprintf(savestate_cache.labels[slot], sizeof(savestate_cache.labels[slot]),
                 "%02d  %s", slot + 1, time_text);
@@ -833,6 +841,9 @@ static bool refresh_rom_browser_current(void) {
 static void draw_menu_background(const MenuPaletteSnapshot *palette) {
     C2D_DrawRectSolid(0, 0, 0, MENU_SCREEN_W, MENU_SCREEN_H,
         palette->shade[COLOUR_SHADE_BACKGROUND]);
+    C2D_DrawRectSolid(0, 0, 0, MENU_PANEL_X, MENU_SCREEN_H,
+        0xFF000000u | colour_scale_rgb(palette->shade[COLOUR_SHADE_BACKGROUND],
+                                        MENU_LEFT_BRIGHTNESS_PERCENT));
 }
 
 static void draw_main_menu_shell(int active_item) {
@@ -850,7 +861,8 @@ static void draw_main_menu_shell(int active_item) {
             (button->disabled ? palette->shade[COLOUR_SHADE_DISABLED] :
              palette->shade[COLOUR_SHADE_READY]);
         C2D_DrawText(&button->text, C2D_AlignLeft | C2D_WithColor,
-            button->x + 8, button->y + button->h / 2 - 10, 0, 0.7, 0.7, text_color);
+            button->x + 8, button->y + button->h / 2 - 9, 0,
+            MAIN_MENU_TEXT_PERCENT / 100.0f, MAIN_MENU_TEXT_PERCENT / 100.0f, text_color);
     }
 }
 
@@ -956,8 +968,10 @@ static void draw_main_menu_preview(int active_item,
                 C2D_SpriteSetPos(&logo_sprite, 216, 28);
                 C2D_DrawSpriteTinted(&logo_sprite, &tint);
             }
-            C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor,
-                216, 62, 0, 0.35, 0.35, theme.nav_selected_text);
+            C2D_DrawText(&text_about, C2D_AlignLeft | C2D_WithColor,
+                MENU_PANEL_X + 8, 62, 0,
+                ABOUT_TEXT_PERCENT / 100.0f, ABOUT_TEXT_PERCENT / 100.0f,
+                theme.nav_selected_text);
             break;
         case MAIN_MENU_LOAD_ROM:
             draw_rom_browser(&rom_browser, palette, false);
@@ -2863,8 +2877,10 @@ static void about(void) {
     LOOP_BEGIN(about_buttons, 0);
         draw_main_menu_shell(MAIN_MENU_ABOUT);
         C2D_DrawSpriteTinted(&logo_sprite, &tint);
-        C2D_DrawText(&text_about, C2D_AlignCenter | C2D_WithColor,
-            216, 62, 0, 0.35, 0.35, theme.nav_selected_text);
+        C2D_DrawText(&text_about, C2D_AlignLeft | C2D_WithColor,
+            MENU_PANEL_X + 8, 62, 0,
+            ABOUT_TEXT_PERCENT / 100.0f, ABOUT_TEXT_PERCENT / 100.0f,
+            theme.nav_selected_text);
     LOOP_END(about_buttons);
     return;
 }
@@ -3291,7 +3307,7 @@ void guiInit(void) {
     STATIC_TEXT(&text_sound_error, "音频初始化失败。\n请确认 DSP 固件已导出。")
     STATIC_TEXT(&text_debug_filenames, "请在问题报告中附上 debug_info.txt 和\ndebug_replay.bin.gz。")
     STATIC_TEXT(&text_anykeyexit, "按任意键退出")
-    STATIC_TEXT(&text_about, VERSION "\n作者：Floogle、danielps 等\n启动画面：Morintari\n自定义控制方案：nevumx\n基于 David Tucker 的 Reality Boy\n更多信息：github.com/skyfloogle/red-viper\n配色模式与 UI 改版：ddd")
+    STATIC_TEXT(&text_about, VERSION " / " MOD_VERSION "\n作者：Floogle、danielps 等\n启动画面：Morintari\n自定义控制方案：nevumx\n基于 David Tucker 的 Reality Boy\n更多信息：github.com/skyfloogle/red-viper\n配色模式与 UI 改版：ddd")
     STATIC_TEXT(&text_loading, "加载中...")
     STATIC_TEXT(&text_loaderr, "ROM 加载失败。")
     STATIC_TEXT(&text_unloaded, "当前 ROM 已卸载。")

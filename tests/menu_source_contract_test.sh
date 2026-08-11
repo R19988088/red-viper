@@ -36,6 +36,12 @@ if ! printf '%s\n' "$target" | grep -Eq 'MenuPaletteSnapshot'; then
     exit 1
 fi
 
+if ! grep -Eq 'colour_scale_rgb|MENU_LEFT_BRIGHTNESS_PERCENT' "$source_file"; then
+    printf '%s\n' \
+        "menu source contract: left-panel brightness is not palette-derived" >&2
+    exit 1
+fi
+
 legacy=$(printf '%s\n' "$target" | grep -En \
     'tVBOpt\.TINT|TINT_[[:alnum:]_]+|COLOR_BRIGHTNESS|menu_theme[[:space:]]*\(|menu_background_color[[:space:]]*\(' \
     || true)

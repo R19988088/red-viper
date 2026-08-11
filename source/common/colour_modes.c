@@ -18,3 +18,15 @@ unsigned colour_mode_value(int mode, int shade) {
 unsigned colour_mode_c2d(int mode, int shade) {
     return 0xFF000000u | colour_mode_value(mode, shade);
 }
+
+static unsigned scale_channel(unsigned channel, unsigned percent) {
+    if (percent > 100) percent = 100;
+    return (channel * percent + 50) / 100;
+}
+
+unsigned colour_scale_rgb(unsigned rgb, unsigned percent) {
+    unsigned r = scale_channel(rgb & 0xffu, percent);
+    unsigned g = scale_channel((rgb >> 8) & 0xffu, percent);
+    unsigned b = scale_channel((rgb >> 16) & 0xffu, percent);
+    return r | (g << 8) | (b << 16);
+}

@@ -36,5 +36,9 @@ int main(void) {
     assert(colour_mode_normalize(2) == 2);
     assert(colour_mode_value(0, -1) == expected[0][0]);
     assert(colour_mode_value(0, COLOUR_SHADE_COUNT) == expected[0][0]);
+    assert(colour_scale_rgb(0xFFFFFF, 80) == 0xCCCCCC);
+    assert(colour_scale_rgb(0x000000, 80) == 0x000000);
+    assert(colour_scale_rgb(0x123456, 0) == 0x000000);
+    assert(colour_scale_rgb(0x123456, 100) == 0x123456);
     return 0;
 }
