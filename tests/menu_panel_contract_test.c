@@ -9,6 +9,12 @@ int main(void) {
     assert(MAIN_MENU_TEXT_PERCENT == 63);
     assert(ABOUT_TEXT_PERCENT == 53);
     assert(ABOUT_LINE_GAP_PERCENT == 150);
+    assert(ABOUT_TITLE_PERCENT == 85);
+    assert(ABOUT_BODY_PERCENT == 48);
+    assert(ABOUT_BODY_TOP == 82);
+    assert(ABOUT_BODY_STEP == 24);
+    assert(ABOUT_SCROLL_STEP == 12);
+    assert(ABOUT_SCROLL_MAX == 110);
     assert(MENU_LEFT_BRIGHTNESS_PERCENT == 80);
     assert(MENU_PANEL_X == 120);
     assert(MENU_PANEL_W == 200);

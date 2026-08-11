@@ -114,7 +114,7 @@ static C2D_TextBuf language_textbuf;
 
 static C2D_Text text_A, text_B, text_btn_A, text_btn_B, text_btn_L, text_btn_R,
                 text_switch, text_saving, text_on, text_off, text_toggle, text_hold, text_nintendo_3ds,
-                text_vbipd, text_left, text_right, text_sound_error, text_anykeyexit, text_about,
+                text_vbipd, text_left, text_right, text_sound_error, text_anykeyexit,
                 text_debug_filenames, text_loading, text_loaderr, text_unloaded, text_yes, text_no,
                 text_areyousure_reset, text_areyousure_exit, text_savestate_menu, text_save, text_load,
                 text_vb_lpad, text_vb_rpad, text_mirror_abxy, text_vblink, text_preset, text_custom,
@@ -874,6 +874,48 @@ static void draw_preview_text(const char *text, float x, float y, float scale, u
     C2D_DrawText(&preview_text, C2D_AlignLeft | C2D_WithColor, x, y, 0, scale, scale, colour);
 }
 
+static const char *about_body_lines[] = {
+    "游戏进度作者",
+    "Floogle、danielps 等",
+    "启动画面",
+    "Morintari",
+    "自定义控制方案",
+    "nevumx 基于 David Tucker 的 Reality Boy",
+    "更多信息",
+    "github.com/skyfloogle/red-viper",
+    "配色模式与 UI 改版",
+    "ddd",
+};
+
+static void draw_about_text(const MenuTheme *theme, int scroll_offset) {
+    C2D_TextBufClear(dynamic_textbuf);
+    C2D_Text text;
+    C2D_TextParse(&text, dynamic_textbuf, "RED VIPER");
+    C2D_TextOptimize(&text);
+    C2D_DrawText(&text, C2D_AlignLeft | C2D_WithColor,
+        MENU_PANEL_X + 8, 16, 0,
+        ABOUT_TITLE_PERCENT / 100.0f, ABOUT_TITLE_PERCENT / 100.0f,
+        theme->nav_selected_text);
+
+    C2D_TextParse(&text, dynamic_textbuf, VERSION " / " MOD_VERSION);
+    C2D_TextOptimize(&text);
+    C2D_DrawText(&text, C2D_AlignLeft | C2D_WithColor,
+        MENU_PANEL_X + 8, 54, 0,
+        ABOUT_BODY_PERCENT / 100.0f, ABOUT_BODY_PERCENT / 100.0f,
+        theme->nav_selected_text);
+
+    for (int i = 0; i < (int)(sizeof(about_body_lines) / sizeof(about_body_lines[0])); i++) {
+        int y = ABOUT_BODY_TOP + i * ABOUT_BODY_STEP + (i / 2) * 8 - scroll_offset;
+        if (y < MENU_PANEL_X - 42 || y > MENU_SCREEN_H - 4) continue;
+        C2D_TextParse(&text, dynamic_textbuf, about_body_lines[i]);
+        C2D_TextOptimize(&text);
+        C2D_DrawText(&text, C2D_AlignLeft | C2D_WithColor,
+            MENU_PANEL_X + 8, y, 0,
+            ABOUT_BODY_PERCENT / 100.0f, ABOUT_BODY_PERCENT / 100.0f,
+            theme->nav_selected_text);
+    }
+}
+
 static void draw_options_panel(const MenuPaletteSnapshot *palette, int focused_row) {
     for (int row = OPTIONS_COLOUR; row <= OPTIONS_LANGUAGE; row++) {
         Button *option = &options_buttons[row];
@@ -962,16 +1004,7 @@ static void draw_main_menu_preview(int active_item,
             draw_preview_text("加入房间", 152, 108, 0.65, theme.disabled_text);
             break;
         case MAIN_MENU_ABOUT:
-            {
-                C2D_ImageTint tint;
-                C2D_PlainImageTint(&tint, theme.nav_selected_text, 1);
-                C2D_SpriteSetPos(&logo_sprite, 216, 28);
-                C2D_DrawSpriteTinted(&logo_sprite, &tint);
-            }
-            C2D_DrawText(&text_about, C2D_AlignLeft | C2D_WithColor,
-                MENU_PANEL_X + 8, 62, 0,
-                ABOUT_TEXT_PERCENT / 100.0f, ABOUT_TEXT_PERCENT / 100.0f,
-                theme.nav_selected_text);
+            draw_about_text(&theme, 0);
             break;
         case MAIN_MENU_LOAD_ROM:
             draw_rom_browser(&rom_browser, palette, false);
@@ -2870,17 +2903,16 @@ static void savestate_menu(int initial_button, int selected_state) {
 }
 
 static void about(void) {
-    C2D_SpriteSetPos(&logo_sprite, 216, 28);
-    C2D_ImageTint tint;
     MenuTheme theme = menu_theme_from_palette(&frame_palette);
-    C2D_PlainImageTint(&tint, theme.nav_selected_text, 1);
+    int scroll_offset = 0;
     LOOP_BEGIN(about_buttons, 0);
         draw_main_menu_shell(MAIN_MENU_ABOUT);
-        C2D_DrawSpriteTinted(&logo_sprite, &tint);
-        C2D_DrawText(&text_about, C2D_AlignLeft | C2D_WithColor,
-            MENU_PANEL_X + 8, 62, 0,
-            ABOUT_TEXT_PERCENT / 100.0f, ABOUT_TEXT_PERCENT / 100.0f,
-            theme.nav_selected_text);
+        int keys_down = hidKeysDown();
+        if (keys_down & KEY_UP) scroll_offset -= ABOUT_SCROLL_STEP;
+        if (keys_down & KEY_DOWN) scroll_offset += ABOUT_SCROLL_STEP;
+        if (scroll_offset < 0) scroll_offset = 0;
+        if (scroll_offset > ABOUT_SCROLL_MAX) scroll_offset = ABOUT_SCROLL_MAX;
+        draw_about_text(&theme, scroll_offset);
     LOOP_END(about_buttons);
     return;
 }
@@ -3307,7 +3339,6 @@ void guiInit(void) {
     STATIC_TEXT(&text_sound_error, "音频初始化失败。\n请确认 DSP 固件已导出。")
     STATIC_TEXT(&text_debug_filenames, "请在问题报告中附上 debug_info.txt 和\ndebug_replay.bin.gz。")
     STATIC_TEXT(&text_anykeyexit, "按任意键退出")
-    STATIC_TEXT(&text_about, VERSION " / " MOD_VERSION "\n作者：Floogle、danielps 等\n启动画面：Morintari\n自定义控制方案：nevumx\n基于 David Tucker 的 Reality Boy\n更多信息：github.com/skyfloogle/red-viper\n配色模式与 UI 改版：ddd")
     STATIC_TEXT(&text_loading, "加载中...")
     STATIC_TEXT(&text_loaderr, "ROM 加载失败。")
     STATIC_TEXT(&text_unloaded, "当前 ROM 已卸载。")
